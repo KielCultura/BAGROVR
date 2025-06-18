@@ -1,41 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Google Apps Script API Test</title>
+  <meta charset="UTF-8">
+  <title>Contact Form with Google Apps Script (CORS Proxy)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 2rem auto; }
-    label, input, button { display: block; margin-bottom: 1em; }
-    pre { background: #f5f5f5; padding: 1em; }
+    body { font-family: sans-serif; background: #f4f4f4; max-width: 480px; margin: 40px auto; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px #0002; }
+    form { display: flex; flex-direction: column; gap: 1em; }
+    label { font-weight: bold; }
+    input, button { padding: 0.5em; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
+    .result { margin-top: 1em; font-weight: bold; }
   </style>
 </head>
 <body>
-  <script src="script.js"></script>
-  <h1>Send Data to Apps Script</h1>
-  <form id="myForm" autocomplete="off">
-    <label for="message">Message:</label>
-    <input type="text" id="message" name="message" required />
+  <h2>Contact Form</h2>
+  <form id="myForm">
+    <label for="nameInput">Name</label>
+    <input id="nameInput" name="name" required>
+    <label for="emailInput">Email</label>
+    <input id="emailInput" name="email" type="email" required>
     <button type="submit">Send</button>
   </form>
-  <pre id="result"></pre>
-  <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbziPhNO07r2ngZcDdzrwFg23Zaa_w643lMzvWSsMqjy4rNPT3Dkh5LJ9EIgVjFs5MiX/exec";
-    document.getElementById('myForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const message = document.getElementById('message').value;
-      document.getElementById('result').textContent = "Sending...";
-      try {
-        const res = await fetch(scriptUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message })
-        });
-        const data = await res.json();
-        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById('result').textContent = "Error: " + err;
-      }
-    });
-  </script>
+  <div class="result" id="result"></div>
+  <script src="script.js"></script>
 </body>
 </html>
