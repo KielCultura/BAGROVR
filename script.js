@@ -1,6 +1,6 @@
 // WARNING: Putting API keys in frontend JS is NOT secure for production or public demos! YES TEST LANG PLS HACKER HAVE MERCY THIS API IS FREE ANYWAYS 
 
-const GROQ_API_KEY = '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'; // TODO: Replace with your actual key for testing. Remove before sharing!
+const GROQ_API_KEY = ''; // TODO: Replace with your actual key for testing. Remove before sharing!
 const endpoint = 'https://api.groq.com/openai/v1/chat/completions'; // Adjust API endpoint if GROQ docs change
 
 document.getElementById('searchForm').addEventListener('submit', async function(e) {
