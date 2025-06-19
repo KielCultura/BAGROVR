@@ -2,26 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Contact Form with Google Apps Script (CORS Proxy)</title>
+  <title>GROQ API Search Bar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; background: #f4f4f4; max-width: 480px; margin: 40px auto; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px #0002; }
-    form { display: flex; flex-direction: column; gap: 1em; }
-    label { font-weight: bold; }
-    input, button { padding: 0.5em; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
-    .result { margin-top: 1em; font-weight: bold; }
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 2em; background: #fafbfc; }
+    #searchForm { display: flex; gap: 1em; }
+    #searchInput { flex: 1; padding: 0.5em; font-size: 1.1em; }
+    #submitBtn { padding: 0.5em 1em; }
+    #result { margin-top: 2em; background: #fff; border-radius: 8px; padding: 1em; border: 1px solid #eee; }
+    .error { color: red; }
   </style>
 </head>
 <body>
-  <h2>Contact Form</h2>
-  <form id="myForm">
-    <label for="nameInput">Name</label>
-    <input id="nameInput" name="name" required>
-    <label for="emailInput">Email</label>
-    <input id="emailInput" name="email" type="email" required>
-    <button type="submit">Send</button>
+  <h2>GROQ API Search</h2>
+  <form id="searchForm">
+    <input id="searchInput" required placeholder="Enter your query here..." />
+    <button id="submitBtn" type="submit">Search</button>
   </form>
-  <div class="result" id="result"></div>
+  <div id="result"></div>
   <script src="script.js"></script>
 </body>
 </html>
