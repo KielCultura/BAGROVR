@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bagrovr: Friendly Local Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; background: #faf9f6; margin: 0; padding: 2em; }
+    #container { max-width: 480px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; }
+    h1 { text-align: center; color: #2d3e50; }
+    form { display: flex; flex-direction: column; gap: 1em; }
+    input[type="text"] { padding: 0.6em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #3b82f6; color: #fff; border: none; padding: 0.7em; border-radius: 4px; cursor: pointer; font-size: 1em; }
+    button:disabled { background: #bbb; }
+    #result { margin-top: 2em; min-height: 100px; }
+    .error { color: #e11d48; }
+    .loading { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Bagrovr</h1>
+    <form id="searchForm">
+      <input type="text" id="establishment" placeholder="What are you looking for? (e.g. cafes, vegan food)" required>
+      <input type="text" id="location" placeholder="Location (default: Baguio City, Philippines)">
+      <button type="submit">Search</button>
+    </form>
+    <div id="result"></div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
