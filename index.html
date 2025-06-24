@@ -8,11 +8,34 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --main-font: 'Lato', Arial, sans-serif;
+    }
     body {
-      font-family: 'Lato', Arial, sans-serif;
+      font-family: var(--main-font);
       background: #f5f8fa;
       margin: 0;
       padding: 0;
+      transition: font-family 0.2s;
+    }
+    .font-select-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .font-select-row label {
+      font-size: 1em;
+      color: #4169e1;
+      font-weight: 700;
+    }
+    .font-select-row select {
+      font-size: 1em;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      background: #f8faff;
     }
     .container {
       max-width: 700px;
@@ -49,7 +72,7 @@
       border: 1px solid #bbb;
       flex: 1;
       background: #f8faff;
-      font-family: 'Lato', Arial, sans-serif;
+      font-family: inherit;
     }
     .input-row button {
       background: #4169e1;
@@ -59,7 +82,7 @@
       padding: 9px 22px;
       cursor: pointer;
       font-size: 1.08em;
-      font-family: 'Lato', Arial, sans-serif;
+      font-family: inherit;
     }
     .input-row button:hover {
       background: #3146b6;
@@ -147,7 +170,7 @@
       padding: 4px 12px;
       cursor: pointer;
       font-size: 0.97em;
-      font-family: 'Lato', Arial, sans-serif;
+      font-family: inherit;
       margin-left: 8px;
       transition: background 0.2s;
     }
@@ -190,12 +213,12 @@
       border: 1px solid #e2e4ed;
       border-radius: 7px;
       width: 300px;
-      max-height: 400px;
+      max-height: 450px;
       overflow-y: auto;
       box-shadow: 0 2px 12px #0002;
       padding: 15px 14px 14px 16px;
       z-index: 5;
-      font-family: 'Lato', Arial, sans-serif;
+      font-family: inherit;
     }
     .itinerary h4 {
       margin: 0 0 10px 0;
@@ -274,6 +297,7 @@
       margin: 10px 0 0 0;
       width: 100%;
       transition: background 0.2s;
+      font-family: inherit;
     }
     .export-btn:hover {
       background: #3146b6;
@@ -294,6 +318,19 @@
 </head>
 <body>
   <div class="container">
+
+    <div class="font-select-row">
+      <label for="fontSelect">Font:</label>
+      <select id="fontSelect">
+        <option value="'Lato', Arial, sans-serif" data-pdf="helvetica">Lato (default)</option>
+        <option value="Arial, Helvetica, sans-serif" data-pdf="helvetica">Arial</option>
+        <option value="'Times New Roman', Times, serif" data-pdf="times">Times New Roman</option>
+        <option value="'Courier New', Courier, monospace" data-pdf="courier">Courier New</option>
+        <option value="Georgia, Times, serif" data-pdf="times">Georgia</option>
+        <option value="Verdana, Geneva, sans-serif" data-pdf="helvetica">Verdana</option>
+      </select>
+    </div>
+
     <div class="brand">BagRovr</div>
     <div class="subtitle">Baguio City Travel Guide & Itinerary Planner</div>
     <form id="searchForm" autocomplete="off">
@@ -319,6 +356,22 @@
   <script>
     let history = []; // [{query, places}]
     let itinerary = [];
+
+    // Font logic
+    function setFontFamily(fontCSS) {
+      document.documentElement.style.setProperty('--main-font', fontCSS);
+    }
+    document.getElementById('fontSelect').onchange = function() {
+      setFontFamily(this.value);
+    };
+    // On load, set initial font
+    setFontFamily(document.getElementById('fontSelect').value);
+
+    // Helper for PDF font mapping
+    function getPDFfont() {
+      const select = document.getElementById('fontSelect');
+      return select.options[select.selectedIndex].getAttribute('data-pdf') || 'helvetica';
+    }
 
     function escapeHTML(str) {
       if (!str) return '';
@@ -484,20 +537,22 @@
     function exportItineraryAsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      doc.setFont("helvetica");
+      const font = getPDFfont();
+      doc.setFont(font);
       doc.setFontSize(18);
       doc.text("My Baguio Itinerary", 20, 20);
       doc.setFontSize(12);
       let y = 30;
       itinerary.forEach((place, idx) => {
-        doc.setFont("helvetica", "bold");
+        doc.setFont(font, "bold");
         doc.text(`${idx + 1}. ${place.name}`, 20, y);
         y += 7;
-        doc.setFont("helvetica", "normal");
+        doc.setFont(font, "normal");
         doc.text(`Address: ${place.address}`, 22, y);
         y += 7;
         if (place.google_maps_url) {
-          doc.textWithLink("Google Maps", 22, y, { url: place.google_maps_url });
+          // Show the actual URL in the PDF, clearly labeled as "Link:"
+          doc.text(`Link: ${place.google_maps_url}`, 22, y);
           y += 7;
         }
         if (place.timeSpent) {
