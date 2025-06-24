@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -56,4 +56,11 @@ ${JSON.stringify(places, null, 2)}
     const groqJson = await groqRes.json();
     console.log("Groq response:", groqJson);
 
-    const summary = groqJson.choices?.[0]?.message?.content || "Sorry, something went wrong with our guide
+    const summary = groqJson.choices?.[0]?.message?.content || "Sorry, something went wrong with our guide.";
+
+    res.status(200).json({ summary });
+  } catch (err) {
+    console.error("API error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
