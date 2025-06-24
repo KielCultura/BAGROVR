@@ -3,33 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <title>BagRovr - Baguio City Travel Guide & Itinerary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- jsPDF CDN for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
   <style>
-    /* ...your styles... */
-    .history { max-height: 300px; overflow-y: auto; background: #f7faff; padding: 1em; margin-bottom: 1em; border-radius: 10px; }
-    .itinerary-details { display: flex; gap: 8px; align-items: center; }
-    .itinerary-details input, .itinerary-details textarea { font-size: 0.96em; }
-    .export-btn { margin-top: 10px; background: #4169e1; color: #fff; border: none; border-radius: 5px; padding: 9px 22px; cursor: pointer;}
-    .export-btn:hover { background: #3146b6; }
+    body {
+      font-family: 'Lato', Arial, sans-serif;
+      background: #f5f8fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: 40px auto 0;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px #0001;
+      padding: 32px 24px 100px 24px;
+      position: relative;
+    }
+    .brand {
+      text-align: center;
+      font-weight: 700;
+      font-size: 2.1em;
+      color: #4169e1;
+      margin-bottom: 2px;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #444;
+      font-size: 1.1em;
+      margin: 0 0 16px 0;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .input-row input {
+      font-size: 1.08em;
+      padding: 9px 12px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      flex: 1;
+      background: #f8faff;
+      font-family: 'Lato', Arial, sans-serif;
+    }
+    .input-row button {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 9px 22px;
+      cursor: pointer;
+      font-size: 1.08em;
+      font-family: 'Lato', Arial, sans-serif;
+    }
+    .input-row button:hover {
+      background: #3146b6;
+    }
+    .results-title {
+      font-weight: bold;
+      color: #4169e1;
+      margin: 18px 0 6px 0;
+      font-size: 1.08em;
+      letter-spacing: 1px;
+    }
+    .history-title {
+      font-weight: bold;
+      color: #4169e1;
+      margin: 18px 0 6px 0;
+      font-size: 1.05em;
+      letter-spacing: 1px;
+    }
+    .history {
+      max-height: 260px;
+      overflow-y: auto;
+      background: #fafdff;
+      padding: 15px 10px 12px 10px;
+      margin-bottom: 9px;
+      border-radius: 10px;
+      border: 1px solid #e2e4ed;
+      box-shadow: 0 1px 6px #4169e115;
+    }
+    .history-block {
+      margin-bottom: 16px;
+      background: #f5f7fa;
+      border-radius: 8px;
+      padding: 8px 11px 7px 11px;
+      border: 1px solid #e2e4ed;
+    }
+    .history-query {
+      font-weight: bold;
+      font-size: 1em;
+      color: #183ba8;
+      margin-bottom: 3px;
+    }
+    .results {
+      margin: 0 0 17px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .place-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .place-number {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #4169e1;
+      min-width: 2ch;
+    }
+    .card {
+      background: #fafdff;
+      border: 1px solid #e2e4ed;
+      border-radius: 8px;
+      padding: 13px 15px 10px 15px;
+      width: 100%;
+      box-shadow: 0 2px 8px #4169e119;
+      margin-bottom: 8px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+    .card-title {
+      font-size: 1.08em;
+      color: #183ba8;
+      font-weight: 700;
+      margin-right: 5px;
+    }
+    .card-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.97em;
+      font-family: 'Lato', Arial, sans-serif;
+      margin-left: 8px;
+      transition: background 0.2s;
+    }
+    .card-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .card-btn:hover:not(:disabled) {
+      background: #3146b6;
+    }
+    .card-rating {
+      font-size: 0.98em;
+      margin-bottom: 2px;
+      color: #373a4a;
+    }
+    .card-address {
+      margin-bottom: 2px;
+      color: #616487;
+      font-size: 0.97em;
+    }
+    .card-desc {
+      font-style: italic;
+      color: #299b2a;
+      font-size: 0.93em;
+      margin-bottom: 2px;
+      background: #eafbe6;
+      border-radius: 6px;
+      padding: 5px 9px;
+    }
+    .card-link {
+      color: #4169e1;
+      text-decoration: none;
+      font-size: 0.95em;
+    }
+    .itinerary {
+      position: fixed;
+      right: 25px;
+      bottom: 25px;
+      background: #fff;
+      border: 1px solid #e2e4ed;
+      border-radius: 7px;
+      width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: 0 2px 12px #0002;
+      padding: 15px 14px 14px 16px;
+      z-index: 5;
+      font-family: 'Lato', Arial, sans-serif;
+    }
+    .itinerary h4 {
+      margin: 0 0 10px 0;
+      color: #4169e1;
+    }
+    .itinerary ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .itinerary li {
+      margin: 0 0 10px 0;
+      background: #fafdff;
+      border-radius: 6px;
+      padding: 7px 7px 6px 7px;
+      border: 1px solid #e2e4ed;
+      box-shadow: 0 1px 4px #4169e115;
+      font-size: 1em;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .itinerary-header {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .itinerary-link {
+      color: #4169e1;
+      text-decoration: none;
+      font-size: 0.97em;
+      margin-left: 4px;
+    }
+    .itinerary-btns {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 3px;
+    }
+    .itinerary input[type="text"] {
+      font-size: 0.97em;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      background: #f8faff;
+    }
+    .itinerary textarea {
+      font-size: 0.97em;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      background: #f8faff;
+      resize: vertical;
+      min-height: 22px;
+      max-height: 50px;
+      width: 100%;
+    }
+    .remove {
+      margin-left: auto;
+      background: #ff6464;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 7px;
+      cursor: pointer;
+    }
+    .export-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 20px;
+      cursor: pointer;
+      font-size: 1em;
+      margin: 10px 0 0 0;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .export-btn:hover {
+      background: #3146b6;
+    }
+    .loading {
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+    @media (max-width: 900px) {
+      .container { max-width: 99vw; }
+      .itinerary { right: 1vw; width: 94vw; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="brand">BagRovr</div>
+    <div class="subtitle">Baguio City Travel Guide & Itinerary Planner</div>
     <form id="searchForm" autocomplete="off">
-      <input id="searchInput" type="text" placeholder="Search for places..." required />
-      <button type="submit">Search</button>
+      <div class="input-row">
+        <input id="searchInput" type="text" placeholder="Search for hotels, places, food, shops, etc..." required />
+        <button type="submit">Search</button>
+      </div>
     </form>
+
+    <div class="history-title">Search History</div>
     <div class="history" id="history"></div>
+
     <div class="results-title" id="resultsTitle" style="display:none;">Latest Results</div>
     <div class="results" id="results"></div>
   </div>
+
   <div class="itinerary" id="itinerary">
     <h4>My Itinerary</h4>
     <ul id="itineraryList"></ul>
     <button class="export-btn" onclick="exportItineraryAsPDF()">Export as PDF</button>
   </div>
+
   <script>
-    let history = []; // Array of { query, places }
+    let history = []; // [{query, places}]
     let itinerary = [];
 
     function escapeHTML(str) {
@@ -43,44 +331,95 @@
     function renderHistory() {
       const el = document.getElementById('history');
       el.innerHTML = '';
-      history.forEach((entry, idx) => {
-        const title = document.createElement('div');
-        title.innerHTML = `<b>Results for:</b> ${escapeHTML(entry.query)}`;
-        el.appendChild(title);
-        entry.places.forEach((place, i) => {
+      if (!history.length) {
+        el.innerHTML = '<div style="color:#888; text-align:center;">No searches yet.</div>';
+        return;
+      }
+      history.forEach((entry, hIdx) => {
+        const block = document.createElement('div');
+        block.className = 'history-block';
+        block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(entry.query)}</span></div>`;
+        entry.places.forEach((place, idx) => {
+          const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <span class="card-title">${escapeHTML(place.name)}</span>
-            <button onclick="addToItineraryFromHistory(${idx},${i})">Add to Itinerary</button>
-            <div><b>Address:</b> ${escapeHTML(place.address)}</div>
-            <a href="${escapeHTML(place.google_maps_url)}" target="_blank">Google Maps</a>
-            ${place.review ? `<div class="card-desc">${escapeHTML(place.review)}</div>` : ''}
-            <hr/>
+            <div class="place-row">
+              <span class="place-number">${idx + 1}.</span>
+              <div class="card-header">
+                <span class="card-title">${escapeHTML(place.name || 'Unknown')}</span>
+                <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItineraryFromHistory(${hIdx},${idx})">
+                  ${inItinerary ? 'Added' : 'Add to Itinerary'}
+                </button>
+              </div>
+            </div>
+            <div class="card-rating"><b>Rating:</b> ${typeof place.rating === 'number' ? place.rating : 'N/A'} (${place.user_ratings_total || 0} reviews)</div>
+            <div class="card-address"><b>Location:</b> ${escapeHTML(place.address || '')}</div>
+            ${place.review ? `<div class="card-desc">"${escapeHTML(place.review)}"</div>` : ""}
+            <a class="card-link" href="${escapeHTML(place.google_maps_url || '#')}" target="_blank" rel="noopener">View on Google Maps</a>
           `;
-          el.appendChild(card);
+          block.appendChild(card);
         });
+        el.appendChild(block);
+      });
+    }
+
+    function renderResults(places) {
+      const resultsEl = document.getElementById('results');
+      const resultsTitleEl = document.getElementById('resultsTitle');
+      resultsEl.innerHTML = '';
+      if (!places.length) {
+        resultsTitleEl.style.display = "none";
+        resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">No places found.</div>';
+        return;
+      }
+      resultsTitleEl.style.display = "block";
+      places.forEach((place, idx) => {
+        const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="place-row">
+            <span class="place-number">${idx + 1}.</span>
+            <div class="card-header">
+              <span class="card-title">${escapeHTML(place.name || 'Unknown')}</span>
+              <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItineraryFromHistory(0,${idx})">
+                ${inItinerary ? 'Added' : 'Add to Itinerary'}
+              </button>
+            </div>
+          </div>
+          <div class="card-rating"><b>Rating:</b> ${typeof place.rating === 'number' ? place.rating : 'N/A'} (${place.user_ratings_total || 0} reviews)</div>
+          <div class="card-address"><b>Location:</b> ${escapeHTML(place.address || '')}</div>
+          ${place.review ? `<div class="card-desc">"${escapeHTML(place.review)}"</div>` : ""}
+          <a class="card-link" href="${escapeHTML(place.google_maps_url || '#')}" target="_blank" rel="noopener">View on Google Maps</a>
+        `;
+        resultsEl.appendChild(card);
       });
     }
 
     function renderItinerary() {
-      const el = document.getElementById('itineraryList');
-      el.innerHTML = '';
+      const itineraryEl = document.getElementById('itineraryList');
+      itineraryEl.innerHTML = '';
+      if (!itinerary.length) {
+        itineraryEl.innerHTML = '<li><em>No places yet.</em></li>';
+        return;
+      }
       itinerary.forEach((place, idx) => {
-        el.innerHTML += `
-          <li>
-            <div>
-              <b>${idx + 1}.</b> <a href="${escapeHTML(place.google_maps_url)}" target="_blank">${escapeHTML(place.name)}</a>
-            </div>
-            <div class="itinerary-details">
-              <label>Time/Notes:</label>
-              <input type="text" value="${escapeHTML(place.timeSpent || '')}" 
-                onchange="updateItineraryTime(${idx}, this.value)" placeholder="e.g. 2 hours, or 'Lunch'" />
-              <textarea rows="1" placeholder="Notes..." onchange="updateItineraryNotes(${idx}, this.value)">${escapeHTML(place.userNotes || '')}</textarea>
-              <button onclick="removeFromItinerary(${idx})">✕</button>
-            </div>
-          </li>
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="itinerary-header">
+            <span style="font-weight:bold;color:#4169e1;font-size:1em;">${idx + 1}.</span>
+            <span style="font-weight:700;">${escapeHTML(place.name)}</span>
+            <a class="itinerary-link" href="${escapeHTML(place.google_maps_url)}" target="_blank">Map</a>
+            <button class="remove" onclick="removeFromItinerary(${idx})" title="Remove from itinerary">✕</button>
+          </div>
+          <div class="itinerary-btns">
+            <input type="text" value="${escapeHTML(place.timeSpent || '')}" 
+              onchange="updateItineraryTime(${idx}, this.value)" placeholder="Time (e.g. 2:00pm-3:00pm)" style="width:90px;" />
+            <textarea rows="1" placeholder="Notes..." onchange="updateItineraryNotes(${idx}, this.value)">${escapeHTML(place.userNotes || '')}</textarea>
+          </div>
         `;
+        itineraryEl.appendChild(li);
       });
     }
 
@@ -89,6 +428,8 @@
       if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
         itinerary.push({...place, timeSpent: '', userNotes: ''});
         renderItinerary();
+        renderHistory();
+        renderResults(history[0]?.places || []);
       }
     }
     function updateItineraryTime(idx, val) {
@@ -100,40 +441,34 @@
     function removeFromItinerary(idx) {
       itinerary.splice(idx, 1);
       renderItinerary();
+      renderHistory();
+      renderResults(history[0]?.places || []);
     }
 
     async function fetchResults(query) {
       const resultsEl = document.getElementById('results');
       const resultsTitleEl = document.getElementById('resultsTitle');
-      resultsTitleEl.style.display = "block";
-      resultsEl.innerHTML = '<div>Searching...</div>';
+      let normalized = query.trim();
+      if (!/baguio city/i.test(normalized)) {
+        normalized += " in Baguio City";
+      }
+      resultsTitleEl.style.display = "none";
+      resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #4169e1;">Searching...</div>';
       try {
         const resp = await fetch('/api/google-places-groq', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ term: query })
+          body: JSON.stringify({ term: normalized })
         });
         if (!resp.ok) throw new Error(`API error (${resp.status})`);
         const data = await resp.json();
         const places = Array.isArray(data.places) ? data.places : [];
-        history.unshift({ query, places }); // add to history
+        history.unshift({ query: normalized, places }); // add to history
         if (history.length > 10) history.length = 10; // keep 10 most recent
         renderHistory();
-        // show latest results as well
-        resultsEl.innerHTML = '';
-        places.forEach((place, idx) => {
-          resultsEl.innerHTML += `
-            <div class="card">
-              <span class="card-title">${escapeHTML(place.name)}</span>
-              <button onclick="addToItineraryFromHistory(0,${idx})">Add to Itinerary</button>
-              <div><b>Address:</b> ${escapeHTML(place.address)}</div>
-              <a href="${escapeHTML(place.google_maps_url)}" target="_blank">Google Maps</a>
-              ${place.review ? `<div class="card-desc">${escapeHTML(place.review)}</div>` : ''}
-            </div>
-          `;
-        });
+        renderResults(places);
       } catch (err) {
-        resultsEl.innerHTML = '<div>Sorry, something went wrong.</div>';
+        resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #e64;">Sorry, something went wrong. Please try again.</div>';
       }
     }
 
@@ -149,11 +484,16 @@
     function exportItineraryAsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
+      doc.setFont("helvetica");
+      doc.setFontSize(18);
       doc.text("My Baguio Itinerary", 20, 20);
+      doc.setFontSize(12);
       let y = 30;
       itinerary.forEach((place, idx) => {
+        doc.setFont("helvetica", "bold");
         doc.text(`${idx + 1}. ${place.name}`, 20, y);
         y += 7;
+        doc.setFont("helvetica", "normal");
         doc.text(`Address: ${place.address}`, 22, y);
         y += 7;
         if (place.google_maps_url) {
@@ -161,7 +501,7 @@
           y += 7;
         }
         if (place.timeSpent) {
-          doc.text(`Time/Notes: ${place.timeSpent}`, 22, y);
+          doc.text(`Time: ${place.timeSpent}`, 22, y);
           y += 7;
         }
         if (place.userNotes) {
