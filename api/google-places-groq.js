@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
   let places = [];
   let next_page_token = null;
   for (let i = 0; i < 3 && places.length < 10; i++) {
-    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(term + " in Baguio City")}&key=${apiKey}`;
+    let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${BAGUIO_LAT},${BAGUIO_LNG}&radius=5000&type=lodging&key=${apiKey}`;
     if (next_page_token) url += `&pagetoken=${next_page_token}`;
     const resp = await fetch(url);
     const data = await resp.json();
@@ -34,20 +34,39 @@ module.exports = async (req, res) => {
     const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,reviews,url&key=${apiKey}`;
     const detailsRes = await fetch(detailsUrl);
     const detailsData = await detailsRes.json();
-    return detailsData.result || {};
+    const hotel = detailsData.result || {};
+
+    // Filter reviews: only keep those with rating >= 4
+    let positiveReview = "";
+    if (hotel.reviews && Array.isArray(hotel.reviews)) {
+      const positive = hotel.reviews.filter(r => r.rating >= 4 && r.text && r.text.length > 0);
+      if (positive.length > 0) {
+        // Pick the first positive review
+        positiveReview = positive[0].text;
+      }
+    }
+    return {
+      name: hotel.name,
+      address: hotel.formatted_address,
+      rating: hotel.rating,
+      user_ratings_total: hotel.user_ratings_total,
+      google_maps_url: hotel.url,
+      review: positiveReview
+    };
   }));
 
+  // For Groq, only include positive reviews in prompt
   const hotelsForPrompt = hotels.map(hotel => ({
     name: hotel.name,
-    address: hotel.formatted_address,
+    address: hotel.address,
     rating: hotel.rating,
     user_ratings_total: hotel.user_ratings_total,
-    google_maps_url: hotel.url,
-    review: hotel.reviews?.[0]?.text
+    google_maps_url: hotel.google_maps_url,
+    review: hotel.review // Already filtered above
   }));
 
   const prompt = `
-You are a friendly local guide. Given this Google Places data, write a helpful, friendly top ${hotelsForPrompt.length} list for a tourist in Baguio City looking for hotels. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. If reviews are few, let the user know. Be concise and conversational.
+You are a friendly local guide. Given this Google Places data, write a helpful, friendly top ${hotelsForPrompt.length} list for a tourist in Baguio City looking for hotels. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. Only refer to positive reviews (4 or 5 stars). Be concise and conversational.
 
 Google Places data:
 ${JSON.stringify(hotelsForPrompt, null, 2)}
