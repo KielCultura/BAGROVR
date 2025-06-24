@@ -1,57 +1,58 @@
+const BAGUIO_LAT = 16.4023;
+const BAGUIO_LNG = 120.5960;
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    const { term, location } = req.body;
+    const { term } = req.body;
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
 
     if (!apiKey || !groqKey) {
-      console.error("Missing API keys");
       return res.status(500).json({ error: "Missing API keys." });
     }
 
-    // 1. Text Search for places (grab more than 10, e.g. 20)
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(term + ' in ' + location)}&key=${apiKey}`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    console.log("Google Places search data:", searchData);
+    // Only search for hotels (lodging)
+    let places = [];
+    let next_page_token = null;
+    for (let i = 0; i < 3 && places.length < 10; i++) {
+      let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${BAGUIO_LAT},${BAGUIO_LNG}&radius=5000&type=lodging&key=${apiKey}`;
+      if (next_page_token) url += `&pagetoken=${next_page_token}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data.results) places = places.concat(data.results);
+      next_page_token = data.next_page_token;
+      if (!next_page_token) break;
+      // Google requires a short delay before using next_page_token
+      await new Promise(r => setTimeout(r, 2000));
+    }
 
-    if (!searchData.results || searchData.results.length === 0)
-      return res.status(404).json({ error: "No places found." });
-
-    // 2. For each place, get details (including reviews) -- get top 20 for more filtering room
-    const detailsPromises = searchData.results.slice(0, 20).map(async (place) => {
-      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url,types&key=${apiKey}`;
+    // Get Details for top 10 hotels only
+    const topResults = places.slice(0, 10);
+    const hotels = await Promise.all(topResults.map(async (place) => {
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,reviews,url&key=${apiKey}`;
       const detailsRes = await fetch(detailsUrl);
       const detailsData = await detailsRes.json();
       return detailsData.result || {};
-    });
-    const places = await Promise.all(detailsPromises);
+    }));
 
-    // 3. Filter for hotels (lodging) and take only the top 10
-    const hotels = places.filter(place => Array.isArray(place.types) && place.types.includes('lodging'));
-    const topHotels = hotels.slice(0, 10);
-
-    const placesForPrompt = topHotels.map(place => ({
-      name: place.name,
-      address: place.formatted_address,
-      rating: place.rating,
-      user_ratings_total: place.user_ratings_total,
-      google_maps_url: place.url,
-      review: place.reviews?.[0]?.text
+    const hotelsForPrompt = hotels.map(hotel => ({
+      name: hotel.name,
+      address: hotel.formatted_address,
+      rating: hotel.rating,
+      user_ratings_total: hotel.user_ratings_total,
+      google_maps_url: hotel.url,
+      review: hotel.reviews?.[0]?.text
     }));
 
     const prompt = `
-You are a friendly local guide. Given this Google Places data, write a helpful, friendly top ${placesForPrompt.length} list for a tourist in ${location} looking for ${term}. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. If reviews are few, let the user know. Be concise and conversational.
+You are a friendly local guide. Given this Google Places data, write a helpful, friendly top ${hotelsForPrompt.length} list for a tourist in Baguio City looking for hotels. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. If reviews are few, let the user know. Be concise and conversational.
 
 Google Places data:
-${JSON.stringify(placesForPrompt, null, 2)}
-
-If there are fewer than 10 places, just list the available ones. Do not invent or pad with unrelated places.
+${JSON.stringify(hotelsForPrompt, null, 2)}
 `;
 
-    // 4. Call Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,8 +67,6 @@ If there are fewer than 10 places, just list the available ones. Do not invent o
       }),
     });
     const groqJson = await groqRes.json();
-    console.log("Groq response:", groqJson);
-
     const summary = groqJson.choices?.[0]?.message?.content || "Sorry, something went wrong with our guide.";
 
     res.status(200).json({ summary });
