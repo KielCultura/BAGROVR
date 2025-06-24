@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
   let places = [];
   let next_page_token = null;
   for (let i = 0; i < 3 && places.length < 10; i++) {
-    let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${BAGUIO_LAT},${BAGUIO_LNG}&radius=5000&type=lodging&key=${apiKey}`;
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(term + " in Baguio City")}&key=${apiKey}`;
     if (next_page_token) url += `&pagetoken=${next_page_token}`;
     const resp = await fetch(url);
     const data = await resp.json();
