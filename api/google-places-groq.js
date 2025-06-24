@@ -23,21 +23,31 @@ module.exports = async function handler(req, res) {
     // 2. For each place, get details (including reviews)
     const places = await Promise.all(
       searchData.results.slice(0, 10).map(async (place) => {
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,review,formatted_address,url,types,photos&key=${apiKey}`;
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url&key=${apiKey}`;
         const detailsRes = await fetch(detailsUrl);
         const detailsData = await detailsRes.json();
         return detailsData.result || {};
       })
     );
-    console.log("Google Places detailed data:", places);
 
-    // 3. Construct prompt for Groq
+    // Only send minimal fields to Groq
+    const placesForPrompt = places.map(place => ({
+      name: place.name,
+      address: place.formatted_address,
+      rating: place.rating,
+      user_ratings_total: place.user_ratings_total,
+      google_maps_url: place.url,
+      review: place.reviews?.[0]?.text
+    }));
+    console.log("Places for Groq prompt:", placesForPrompt);
+
     const prompt = `
 You are a friendly local guide. Given this Google Places data, write a helpful, friendly top 10 list for a tourist in ${location} looking for ${term}. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. If reviews are few, let the user know. Be concise and conversational.
 
 Google Places data:
-${JSON.stringify(places, null, 2)}
+${JSON.stringify(placesForPrompt, null, 2)}
 `;
+    console.log("Prompt length:", prompt.length);
 
     // 4. Call Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
