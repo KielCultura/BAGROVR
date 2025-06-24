@@ -1,27 +1,49 @@
-// ... other code ...
-const places = await Promise.all(
-  searchData.results.map(async (place) => {
-    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url,types&key=${apiKey}`;
-    const detailsRes = await fetch(detailsUrl);
-    const detailsData = await detailsRes.json();
-    return detailsData.result || {};
-  })
-);
+module.exports = async function handler(req, res) {
+  try {
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-// Filter for hotels (lodging)
-const hotels = places.filter(place => place.types && place.types.includes('lodging'));
-const topHotels = hotels.slice(0, 10);
+    const { term, location } = req.body;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
 
-const placesForPrompt = topHotels.map(place => ({
-  name: place.name,
-  address: place.formatted_address,
-  rating: place.rating,
-  user_ratings_total: place.user_ratings_total,
-  google_maps_url: place.url,
-  review: place.reviews?.[0]?.text
-}));
+    if (!apiKey || !groqKey) {
+      console.error("Missing API keys");
+      return res.status(500).json({ error: "Missing API keys." });
+    }
 
-const prompt = `
+    // 1. Text Search for places
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(term + ' in ' + location)}&key=${apiKey}`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    console.log("Google Places search data:", searchData);
+
+    if (!searchData.results || searchData.results.length === 0)
+      return res.status(404).json({ error: "No places found." });
+
+    // 2. For each place, get details (including reviews)
+    const places = await Promise.all(
+      searchData.results.map(async (place) => {
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url,types&key=${apiKey}`;
+        const detailsRes = await fetch(detailsUrl);
+        const detailsData = await detailsRes.json();
+        return detailsData.result || {};
+      })
+    );
+
+    // SAFELY filter for hotels (lodging)
+    const hotels = places.filter(place => Array.isArray(place.types) && place.types.includes('lodging'));
+    const topHotels = hotels.slice(0, 10);
+
+    const placesForPrompt = topHotels.map(place => ({
+      name: place.name,
+      address: place.formatted_address,
+      rating: place.rating,
+      user_ratings_total: place.user_ratings_total,
+      google_maps_url: place.url,
+      review: place.reviews?.[0]?.text
+    }));
+
+    const prompt = `
 You are a friendly local guide. Given this Google Places data, write a helpful, friendly top ${placesForPrompt.length} list for a tourist in ${location} looking for ${term}. For each place, mention the name, rating, number of reviews, a fun detail, and provide a Google Maps link. If reviews are few, let the user know. Be concise and conversational.
 
 Google Places data:
@@ -29,4 +51,31 @@ ${JSON.stringify(placesForPrompt, null, 2)}
 
 If there are fewer than 10 places, just list the available ones. Do not invent or pad with unrelated places.
 `;
-// ...rest of code...
+
+    console.log("Prompt length:", prompt.length);
+
+    // 4. Call Groq
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 800,
+        temperature: 0.7,
+      }),
+    });
+    const groqJson = await groqRes.json();
+    console.log("Groq response:", groqJson);
+
+    const summary = groqJson.choices?.[0]?.message?.content || "Sorry, something went wrong with our guide.";
+
+    res.status(200).json({ summary });
+  } catch (err) {
+    console.error("API error:", err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
