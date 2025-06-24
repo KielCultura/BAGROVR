@@ -2,33 +2,183 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bagrovr: Friendly Local Search</title>
+  <title>Travel Chat & Itinerary</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; background: #faf9f6; margin: 0; padding: 2em; }
-    #container { max-width: 480px; margin: 2em auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; }
-    h1 { text-align: center; color: #2d3e50; }
-    form { display: flex; flex-direction: column; gap: 1em; }
-    input[type="text"] { padding: 0.6em; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; }
-    button { background: #3b82f6; color: #fff; border: none; padding: 0.7em; border-radius: 4px; cursor: pointer; font-size: 1em; }
-    button:disabled { background: #bbb; }
-    #result { margin-top: 2em; min-height: 100px; }
-    .error { color: #e11d48; }
-    .loading { color: #64748b; font-style: italic; }
-    .source-note { font-size: 0.9em; color: #888; margin-top: 1.5em; text-align: center; }
+    body { font-family: sans-serif; background: #f5f5f9; margin: 0; padding: 0; }
+    .container { max-width: 700px; margin: 40px auto 0; background: #fff; border-radius: 10px; box-shadow: 0 2px 10px #0001; padding: 32px 24px 100px 24px; position: relative; }
+    h1 { text-align: center; color: #3a3a60; }
+    .chat { max-height: 220px; overflow-y: auto; border-bottom: 1px solid #ddd; margin-bottom: 18px; padding-bottom: 12px; }
+    .msg { margin: 12px 0; }
+    .msg.user { color: #4169e1; text-align: right; }
+    .msg.bot { color: #222; text-align: left; background: #e6f1ff; border-radius: 8px; display: inline-block; padding: 8px 13px; }
+    .msg .time { font-size: 0.8em; color: #888; margin-left: 5px; }
+    .results { margin: 18px 0; display: flex; flex-wrap: wrap; gap: 14px; }
+    .card { background: #fafbff; border: 1px solid #e2e4ed; border-radius: 8px; padding: 13px 15px; flex: 1 1 45%; max-width: 47%; min-width: 220px; position: relative; }
+    .card h3 { margin: 0 0 6px 0; font-size: 1.08em; }
+    .card p { margin: 3px 0; font-size: 0.96em; }
+    .card button { background: #4169e1; color: #fff; border: none; border-radius: 5px; margin-top: 7px; padding: 6px 10px; cursor: pointer; font-size: 0.95em; }
+    .card button:disabled { background: #aaa; }
+    .itinerary { position: fixed; right: 25px; bottom: 25px; background: #fff; border: 1px solid #e2e4ed; border-radius: 7px; width: 260px; max-height: 340px; overflow-y: auto; box-shadow: 0 2px 12px #0002; padding: 15px 12px 14px 12px; z-index: 5; }
+    .itinerary h4 { margin: 0 0 10px 0; color: #4169e1; }
+    .itinerary ul { list-style: none; padding: 0; margin: 0; }
+    .itinerary li { margin: 0 0 7px 0; display: flex; align-items: center; }
+    .itinerary .remove { margin-left: auto; background: #ff6464; color: #fff; border: none; border-radius: 4px; padding: 2px 7px; cursor: pointer; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .input-row input, .input-row select { font-size: 1em; padding: 7px; border-radius: 5px; border: 1px solid #bbb; }
+    .input-row button { background: #4169e1; color: #fff; border: none; border-radius: 5px; padding: 7px 15px; cursor: pointer; }
+    @media (max-width: 900px) {
+      .container { max-width: 98vw; }
+      .results { flex-direction: column; }
+      .card { max-width: 100%; }
+      .itinerary { right: 1vw; width: 90vw; }
+    }
   </style>
 </head>
 <body>
-  <div id="container">
-    <h1>Bagrovr</h1>
-    <form id="searchForm">
-      <input type="text" id="establishment" placeholder="What are you looking for? (e.g. cafes, vegan food)" required>
-      <input type="text" id="location" placeholder="Location (default: Baguio City, Philippines)">
-      <button type="submit">Search</button>
+  <div class="container">
+    <h1>Travel Chat & Itinerary 🗺️</h1>
+    <div class="chat" id="chat"></div>
+    <form id="queryForm">
+      <div class="input-row">
+        <select id="establishmentType">
+          <option value="hotels">Hotels</option>
+          <option value="cafes">Cafes</option>
+          <option value="restaurants">Restaurants</option>
+          <option value="tourist spots">Tourist Spots</option>
+          <option value="museums">Museums</option>
+          <option value="parks">Parks</option>
+        </select>
+        <input id="locationInput" type="text" value="Baguio City" placeholder="Enter location" required />
+        <button type="submit">Show Top 10</button>
+      </div>
     </form>
-    <div id="result"></div>
-    <div class="source-note">Powered by Google Maps and Groq</div>
+    <div class="results" id="results"></div>
   </div>
-  <script src="script.js"></script>
+  <div class="itinerary" id="itinerary">
+    <h4>My Itinerary</h4>
+    <ul id="itineraryList"></ul>
+  </div>
+  <script>
+    const chatEl = document.getElementById('chat');
+    const resultsEl = document.getElementById('results');
+    const itineraryEl = document.getElementById('itineraryList');
+    const form = document.getElementById('queryForm');
+    const typeEl = document.getElementById('establishmentType');
+    const locationEl = document.getElementById('locationInput');
+    let itinerary = [];
+    let lastPlaces = [];
+    let conversation = [];
+
+    function renderChat() {
+      chatEl.innerHTML = conversation.map(msg =>
+        `<div class="msg ${msg.role}">
+          <span>${msg.content}</span>
+          <span class="time">${msg.time || ''}</span>
+        </div>`).join('');
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function renderResults(places) {
+      resultsEl.innerHTML = '';
+      lastPlaces = places || [];
+      if (!places || !places.length) {
+        resultsEl.innerHTML = '<p>No places found.</p>';
+        return;
+      }
+      places.forEach((place, idx) => {
+        const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${idx + 1}. ${place.name || 'Unknown'}</h3>
+          <p><strong>Rating:</strong> ${place.rating || 'N/A'} (${place.user_ratings_total || 0} reviews)</p>
+          <p>${place.address || ''}</p>
+          <p><a href="${place.google_maps_url || '#'}" target="_blank">View on Google Maps</a></p>
+          ${place.review ? `<p style="font-style:italic; color:#555;">"${place.review}"</p>` : ""}
+          <button ${inItinerary ? 'disabled' : ''} onclick="addToItinerary(${idx})">
+            ${inItinerary ? 'Added' : 'Add to Itinerary'}
+          </button>
+        `;
+        resultsEl.appendChild(card);
+      });
+    }
+
+    function renderItinerary() {
+      itineraryEl.innerHTML = '';
+      if (!itinerary.length) {
+        itineraryEl.innerHTML = '<li><em>No places yet.</em></li>';
+        return;
+      }
+      itinerary.forEach((place, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>${idx+1}. ${place.name}</span>
+          <button class="remove" onclick="removeFromItinerary(${idx})">✕</button>
+        `;
+        itineraryEl.appendChild(li);
+      });
+    }
+
+    // Expose to global for inline onclick
+    window.addToItinerary = function(idx) {
+      const place = lastPlaces[idx];
+      if (!itinerary.some(x => x.name === place.name && x.address === place.address)) {
+        itinerary.push(place);
+        renderItinerary();
+        renderResults(lastPlaces);
+      }
+    }
+    window.removeFromItinerary = function(idx) {
+      itinerary.splice(idx, 1);
+      renderItinerary();
+      renderResults(lastPlaces);
+    }
+
+    async function sendQuery(estType, location) {
+      const term = estType;
+      const loc = location;
+      const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      conversation.push({role: 'user', content: `Show me top 10 ${term} in ${loc}.`, time: now});
+      renderChat();
+      // Show a thinking bot message
+      conversation.push({role: 'bot', content: 'Let me find the best places for you...', time: now});
+      renderChat();
+      // Call backend
+      try {
+        const resp = await fetch('/api/google-places-groq', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ term, location: loc, conversation })
+        });
+        if (!resp.ok) throw new Error('API error');
+        const data = await resp.json();
+        // Remove "thinking" msg
+        conversation = conversation.filter(msg => !(msg.role === 'bot' && msg.content.includes('Let me find')));
+        // Add Groq summary as bot message
+        conversation.push({role: 'bot', content: data.summary || 'Here are the results:', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})});
+        renderChat();
+        renderResults(data.places || []);
+      } catch (err) {
+        conversation.push({role: 'bot', content: 'Sorry, something went wrong. Please try again!', time: now});
+        renderChat();
+      }
+    }
+
+    form.onsubmit = e => {
+      e.preventDefault();
+      const estType = typeEl.value;
+      const location = locationEl.value.trim();
+      if (estType && location) {
+        sendQuery(estType, location);
+      }
+    };
+
+    // Initial search on page load
+    window.onload = () => {
+      renderItinerary();
+      sendQuery(typeEl.value, locationEl.value);
+    }
+  </script>
 </body>
 </html>
