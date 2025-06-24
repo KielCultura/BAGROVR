@@ -1,5 +1,5 @@
 async function fetchConversationalSummary(term, location = "Baguio City, Philippines") {
-  const res = await fetch('/api/google-places-groq', {
+  const res = await fetch('https://bagrovr-backend.onrender.com/api/google-places-groq', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
