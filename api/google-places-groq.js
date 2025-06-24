@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: "Missing API keys." });
     }
 
-    // 1. Text Search for places
+    // 1. Text Search for places (grab more than 10, e.g. 20)
     const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(term + ' in ' + location)}&key=${apiKey}`;
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
@@ -20,17 +20,16 @@ module.exports = async function handler(req, res) {
     if (!searchData.results || searchData.results.length === 0)
       return res.status(404).json({ error: "No places found." });
 
-    // 2. For each place, get details (including reviews)
-    const places = await Promise.all(
-      searchData.results.map(async (place) => {
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url,types&key=${apiKey}`;
-        const detailsRes = await fetch(detailsUrl);
-        const detailsData = await detailsRes.json();
-        return detailsData.result || {};
-      })
-    );
+    // 2. For each place, get details (including reviews) -- get top 20 for more filtering room
+    const detailsPromises = searchData.results.slice(0, 20).map(async (place) => {
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,rating,user_ratings_total,reviews,formatted_address,url,types&key=${apiKey}`;
+      const detailsRes = await fetch(detailsUrl);
+      const detailsData = await detailsRes.json();
+      return detailsData.result || {};
+    });
+    const places = await Promise.all(detailsPromises);
 
-    // SAFELY filter for hotels (lodging)
+    // 3. Filter for hotels (lodging) and take only the top 10
     const hotels = places.filter(place => Array.isArray(place.types) && place.types.includes('lodging'));
     const topHotels = hotels.slice(0, 10);
 
@@ -51,8 +50,6 @@ ${JSON.stringify(placesForPrompt, null, 2)}
 
 If there are fewer than 10 places, just list the available ones. Do not invent or pad with unrelated places.
 `;
-
-    console.log("Prompt length:", prompt.length);
 
     // 4. Call Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
