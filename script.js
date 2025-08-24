@@ -74,44 +74,6 @@ window.removeFromItinerary = function(idx) {
   renderResults(lastPlaces);
 }
 
-async function fetchResults(query) {
-  const resultsEl = document.getElementById('results');
-  const resultsTitleEl = document.getElementById('resultsTitle');
-  let normalized = query.trim();
-  if (!/baguio city/i.test(normalized)) {
-    normalized += " in Baguio City";
-  }
-  resultsTitleEl.style.display = "none";
-  resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #4169e1;">Searching...</div>';
-  try {
-    const resp = await fetch('/api/google-places-groq', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ term: normalized })
-    });
-    if (!resp.ok) throw new Error(`API error (${resp.status})`);
-    const data = await resp.json();
-    renderResults(Array.isArray(data.places) ? data.places : []);
-  } catch (err) {
-    resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #e64;">Sorry, something went wrong. Please try again.</div>';
-  }
-}
-
-document.getElementById('searchForm').onsubmit = e => {
-  e.preventDefault();
-  const query = document.getElementById('searchInput').value.trim();
-  if (query) {
-    fetchResults(query);
-    document.getElementById('searchInput').value = '';
-  }
-};
-
-window.onload = () => {
-  renderItinerary();
-  renderResults([]);
-};
-// ...your existing code...
-
 // === Chatbot logic ===
 function addChatMessage(msg, from = "bot") {
   const box = document.getElementById('chatbot-messages');
@@ -128,7 +90,6 @@ function addChatMessage(msg, from = "bot") {
 }
 
 function chatbotParseIntent(text) {
-  // Simple intent extraction — expand as needed!
   let query = "";
   let lower = text.toLowerCase();
 
@@ -138,7 +99,6 @@ function chatbotParseIntent(text) {
   if (lower.includes("open late") || lower.includes("night")) query += "open late ";
   if (lower.includes("hotel") || lower.includes("stay")) query += "hotels ";
 
-  // If no special intent, just use text
   if (!query) query = text;
 
   return query.trim();
@@ -147,7 +107,6 @@ function chatbotParseIntent(text) {
 async function chatbotHandleInput(text) {
   addChatMessage("Let me find the best places for you...", "bot");
   const query = chatbotParseIntent(text);
-  // Call existing fetchResults, then show AI summary if available
   try {
     const resp = await fetch('/api/google-places-groq', {
       method: 'POST',
@@ -161,6 +120,7 @@ async function chatbotHandleInput(text) {
     renderResults(Array.isArray(data.places) ? data.places : []);
   } catch (e) {
     addChatMessage("Sorry, I couldn't find any places right now. Please try again.", "bot");
+    renderResults([]);
   }
 }
 
@@ -184,4 +144,43 @@ document.getElementById('chatbot-toggle').onclick = () => {
       box.setAttribute('data-greeted', '1');
     }
   }
+};
+
+function exportItineraryAsPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const font = 'helvetica'; // Set your preferred font
+  doc.setFont(font);
+  doc.setFontSize(18);
+  doc.text("My Baguio Itinerary", 20, 20);
+  doc.setFontSize(12);
+  let y = 30;
+  itinerary.forEach((place, idx) => {
+    doc.setFont(font, "bold");
+    doc.text(`${idx + 1}. ${place.name}`, 20, y);
+    y += 7;
+    doc.setFont(font, "normal");
+    doc.text(`Address: ${place.address}`, 22, y);
+    y += 7;
+    if (place.google_maps_url) {
+      doc.text(`Link: ${place.google_maps_url}`, 22, y);
+      y += 7;
+    }
+    if (place.timeSpent) {
+      doc.text(`Time: ${place.timeSpent}`, 22, y);
+      y += 7;
+    }
+    if (place.userNotes) {
+      doc.text(`Notes: ${place.userNotes}`, 22, y);
+      y += 7;
+    }
+    y += 5;
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+  doc.save("bagrovr-itinerary.pdf");
+}
+
+window.onload = () => {
+  renderItinerary();
+  renderResults([]);
 };
