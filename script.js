@@ -1,10 +1,10 @@
 let itinerary = [];
-let chatContext = {
-  history: [],    // [{query, places}]
-  lastResults: [],
-  greeted: false,
-  awaitingPreferences: true
-};
+let history = []; // [{query, offset, places}]
+let lastPlaces = [];
+let lastQuery = "";
+let lastOffset = 0;
+let lastMode = "idle"; // "idle" | "awaiting_action" | "awaiting_place_choice"
+let lastDetailPlaceIdx = null;
 
 function escapeHTML(str) {
   if (!str) return '';
@@ -14,35 +14,32 @@ function escapeHTML(str) {
   })[s]);
 }
 
-// Chat UI
-function addChatMessage(msg, type = "bot") {
-  const chatArea = document.getElementById('chat-area');
-  const row = document.createElement('div');
-  row.className = 'chat-message';
-  const bubble = document.createElement('div');
-  bubble.className = type === "bot" ? 'chat-bot' : 'chat-user';
-  bubble.innerText = msg;
-  row.appendChild(bubble);
-  chatArea.appendChild(row);
-  chatArea.scrollTop = chatArea.scrollHeight;
+function setInputEnabled(enabled) {
+  document.getElementById('searchInput').disabled = !enabled;
+  document.getElementById('searchForm').querySelector('button').disabled = !enabled;
+  document.getElementById('searchInput').classList.toggle('disabled', !enabled);
 }
 
-// Results as stylish history block
-function addResultsHistoryBlock(query, places) {
-  const chatArea = document.getElementById('chat-area');
+function clearActionArea() {
+  document.getElementById('actionArea').innerHTML = "";
+}
+
+function addResultsHistoryBlock(query, places, offset) {
+  const historyArea = document.getElementById('historyArea');
   const block = document.createElement('div');
   block.className = 'history-block';
-  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span></div>`;
+  const startNum = offset + 1;
+  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span> <span style="color:#444;">(${startNum}–${startNum + places.length - 1})</span></div>`;
   places.forEach((place, idx) => {
     const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
       <div class="place-row">
-        <span class="place-number">${idx + 1}.</span>
+        <span class="place-number">${startNum + idx}.</span>
         <div class="card-header">
           <span class="card-title">${escapeHTML(place.name || 'Unknown')}</span>
-          <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItineraryFromChat(${chatContext.history.length},${idx})">
+          <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItinerary(${idx})">
             ${inItinerary ? 'Added' : 'Add to Itinerary'}
           </button>
         </div>
@@ -54,20 +51,9 @@ function addResultsHistoryBlock(query, places) {
     `;
     block.appendChild(card);
   });
-  chatArea.appendChild(block);
-  chatArea.scrollTop = chatArea.scrollHeight;
+  historyArea.prepend(block);
 }
 
-// Add to itinerary from chat result block
-window.addToItineraryFromChat = function(histIdx, placeIdx) {
-  const place = chatContext.history[histIdx].places[placeIdx];
-  if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
-    itinerary.push({...place});
-    renderItinerary();
-  }
-}
-
-// Itinerary
 function renderItinerary() {
   const itineraryEl = document.getElementById('itineraryList');
   itineraryEl.innerHTML = '';
@@ -84,125 +70,112 @@ function renderItinerary() {
     itineraryEl.appendChild(li);
   });
 }
+window.addToItinerary = function(idx) {
+  const place = lastPlaces[idx];
+  if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
+    itinerary.push({...place});
+    renderItinerary();
+    // no need to rerender the cards, as action buttons are always shown after
+  }
+};
 window.removeFromItinerary = function(idx) {
   itinerary.splice(idx, 1);
   renderItinerary();
+};
+
+function renderActionPrompt() {
+  lastMode = "awaiting_action";
+  setInputEnabled(false);
+  clearActionArea();
+  const area = document.getElementById('actionArea');
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div style="margin: 16px 0 10px 0; color:#4169e1; font-weight:bold;">
+      Would you like me to generate more, or do you want more information on the places I have shown?
+    </div>
+    <div class="action-buttons">
+      <button class="action-btn" onclick="actionButtonClicked('new')">No, I want to generate something else</button>
+      <button class="action-btn" onclick="actionButtonClicked('more')">Yes, generate more</button>
+      <button class="action-btn" onclick="actionButtonClicked('details')">Can you tell me more about these places?</button>
+    </div>
+  `;
+  area.appendChild(div);
 }
 
-// Conversational state machine
-async function handleUserInput(input) {
-  const low = input.trim().toLowerCase();
-
-  // Place-specific question (e.g. "tell me more about Sunshine Park")
-  const matchPlace = input.match(/(tell me more about|what is|what's|details.*|can you tell me about)\s+(.+)/i);
-  if (matchPlace) {
-    const name = matchPlace[2].trim().toLowerCase();
-    for (let hIdx = chatContext.history.length - 1; hIdx >= 0; hIdx--) {
-      const h = chatContext.history[hIdx];
-      const idx = h.places.findIndex(p => p.name && p.name.toLowerCase().includes(name));
-      if (idx !== -1) {
-        await showPlaceDetails(h.places[idx]);
-        return;
-      }
-    }
-    addChatMessage("I couldn't find that place in our recent results. Try searching again?", "bot");
-    return;
+window.actionButtonClicked = function(which) {
+  clearActionArea();
+  if (which === "new") {
+    lastMode = "idle";
+    setInputEnabled(true);
+    document.getElementById('searchInput').focus();
+  } else if (which === "more") {
+    lastOffset += 10;
+    fetchAndShowPlaces(lastQuery, lastOffset);
+  } else if (which === "details") {
+    lastMode = "awaiting_place_choice";
+    setInputEnabled(false);
+    renderPlaceChoiceButtons();
   }
+};
 
-  // Greet
-  if (!chatContext.greeted && ["hi", "hello", "hey"].includes(low)) {
-    addChatMessage("Hi! 👋 I'm your BagRovr guide. What kind of places are you looking for in Baguio? (e.g. food, nature, hotels, family-friendly, open late...)", "bot");
-    chatContext.greeted = true;
-    chatContext.awaitingPreferences = true;
-    return;
-  }
-
-  // If waiting for preferences
-  if (chatContext.awaitingPreferences) {
-    // Try to extract intent
-    const keywords = ["food", "eat", "restaurant", "cafe", "park", "nature", "family", "kid", "open late", "hotel", "stay", "museum", "shopping", "mall", "art", "bar", "pub", "night"];
-    const found = keywords.some(kw => low.includes(kw));
-    if (!found) {
-      addChatMessage("Could you tell me more about what kind of place or experience you want? (e.g. 'Nature parks', 'family-friendly food', 'hotels open late')", "bot");
-      return;
-    }
-    chatContext.awaitingPreferences = false;
-    await fetchAndShowPlaces(input);
-    return;
-  }
-
-  // After showing places: check for review requests or follow-up refinements
-  if (!chatContext.awaitingPreferences && chatContext.history.length) {
-    // 1-star to 5-star review request
-    const reviewMatch = input.match(/(\d)[ -]?star/i);
-    if (reviewMatch) {
-      const rating = parseInt(reviewMatch[1]);
-      // Try to match "for the (first|second|third|...)" or by place name
-      let idx = 0;
-      const whichPlace = input.match(/for the (first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)/i);
-      const ordinals = ["first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth"];
-      if (whichPlace && whichPlace[1]) {
-        idx = ordinals.indexOf(whichPlace[1].toLowerCase());
-      }
-      // fallback: try to match by name in current results
-      if (input.match(/for (.+)/i) && idx === -1) {
-        const nameStr = RegExp.$1.trim().toLowerCase();
-        const lastPlaces = chatContext.history[chatContext.history.length-1].places;
-        idx = lastPlaces.findIndex(p => p.name && p.name.toLowerCase().includes(nameStr));
-        if (idx === -1) idx = 0;
-      }
-      if (chatContext.history.length && chatContext.history[chatContext.history.length-1].places[idx]) {
-        await showPlaceReviewsByRating(chatContext.history[chatContext.history.length-1].places[idx], rating);
-      } else {
-        addChatMessage("Which place would you like reviews for? (e.g. 'Show me 1-star reviews for the first place')", "bot");
-      }
-      return;
-    }
-    // New preferences/refinement
-    if (input.match(/more|else|another|different|change|other/)) {
-      addChatMessage("Sure! What type of places do you want this time? (e.g. food, parks, hotels, etc.)", "bot");
-      chatContext.awaitingPreferences = true;
-      return;
-    }
-    // Otherwise, treat as new preferences
-    chatContext.awaitingPreferences = true;
-    await handleUserInput(input);
-    return;
-  }
+function renderPlaceChoiceButtons() {
+  clearActionArea();
+  const area = document.getElementById('actionArea');
+  const div = document.createElement('div');
+  div.innerHTML = `<div style="margin: 16px 0 10px 0; color:#4169e1; font-weight:bold;">
+    Which place would you like to talk to me about?</div>`;
+  const btnWrap = document.createElement('div');
+  btnWrap.style.display = "flex";
+  btnWrap.style.flexWrap = "wrap";
+  btnWrap.style.gap = "6px";
+  lastPlaces.forEach((place, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'place-choice-btn';
+    btn.innerText = place.name;
+    btn.onclick = () => {
+      showPlaceDetails(idx);
+    };
+    btnWrap.appendChild(btn);
+  });
+  div.appendChild(btnWrap);
+  area.appendChild(div);
 }
 
-// Fetch and show places (calls your API)
-async function fetchAndShowPlaces(query) {
-  addChatMessage("Let me find the best places for you...", "bot");
+async function handleInput(query) {
+  // Only handle if in 'idle' mode
+  if (lastMode !== "idle") return;
+  lastQuery = query;
+  lastOffset = 0;
+  await fetchAndShowPlaces(lastQuery, lastOffset);
+}
+
+async function fetchAndShowPlaces(query, offset) {
   try {
+    setInputEnabled(false);
+    clearActionArea();
     const resp = await fetch('/api/google-places-groq', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ term: query })
+      body: JSON.stringify({ term: query, offset: offset })
     });
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
-    chatContext.lastResults = data.places;
-    chatContext.history.push({query, places: data.places});
-    addResultsHistoryBlock(query, data.places);
-    if (data.summary) addChatMessage(data.summary, "bot");
-    else addChatMessage("Here are some places you might like!", "bot");
-    addChatMessage("If you want to see specific reviews (e.g., 'Show me 1-star reviews for the first place'), or learn more about any place, just ask!", "bot");
+    lastPlaces = Array.isArray(data.places) ? data.places : [];
+    history.unshift({ query, offset, places: lastPlaces });
+    if (history.length > 10) history.length = 10;
+    addResultsHistoryBlock(query, lastPlaces, offset);
+    renderActionPrompt();
   } catch (e) {
-    addChatMessage("Sorry, I couldn't find any places right now. Please try again.", "bot");
+    alert("Sorry, couldn't fetch places right now.");
+    setInputEnabled(true);
   }
 }
 
-// Show more details about a place (as a history block)
-async function showPlaceDetails(place) {
-  addChatMessage(`Here's more about ${place.name}:`, "bot");
-  addResultsHistoryBlock(`More about ${place.name}`, [place]);
-  // Optionally, fetch additional details from your backend if needed
-}
-
-// Show reviews of a certain rating for a place (calls your API directly)
-async function showPlaceReviewsByRating(place, rating) {
-  addChatMessage(`Fetching ${rating}-star reviews for ${place.name}...`, "bot");
+async function showPlaceDetails(idx) {
+  setInputEnabled(false);
+  clearActionArea();
+  lastDetailPlaceIdx = idx;
+  const place = lastPlaces[idx];
   try {
     const resp = await fetch('/api/google-places-groq', {
       method: 'POST',
@@ -211,33 +184,22 @@ async function showPlaceReviewsByRating(place, rating) {
     });
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
-    // Find reviews with the given rating
-    let reviews = [];
-    if (data.places && data.places.length) {
-      // Try to get all available reviews (if your API returns .reviews)
-      reviews = data.places[0].reviews || [];
-    }
-    const filtered = reviews.filter(r => Math.round(r.rating) == rating);
-    if (filtered.length) {
-      filtered.slice(0, 3).forEach(r =>
-        addChatMessage(`"${r.text}"\n– ${r.author_name || "Anonymous"}`, "bot")
-      );
-    } else {
-      addChatMessage(`No ${rating}-star reviews found for ${place.name}.`, "bot");
-    }
+    const detail = Array.isArray(data.places) && data.places.length ? data.places[0] : place;
+    // For demo, we show as a history block
+    addResultsHistoryBlock(`More about ${detail.name}`, [detail], 0);
+    renderActionPrompt();
   } catch (e) {
-    addChatMessage("Sorry, couldn't fetch reviews at this time.", "bot");
+    alert("Sorry, couldn't fetch more details right now.");
+    renderActionPrompt();
   }
 }
 
-// Chat input handling
-document.getElementById('chatbot-form').onsubmit = e => {
+document.getElementById('searchForm').onsubmit = e => {
   e.preventDefault();
-  const inp = document.getElementById('chatbot-input');
+  const inp = document.getElementById('searchInput');
   const val = inp.value.trim();
   if (!val) return;
-  addChatMessage(val, "user");
-  handleUserInput(val);
+  handleInput(val);
   inp.value = "";
 };
 
@@ -278,6 +240,5 @@ function exportItineraryAsPDF() {
 
 window.onload = () => {
   renderItinerary();
-  addChatMessage("Hi! 👋 I'm your BagRovr guide. What kind of places are you looking for in Baguio? (e.g. food, nature, hotels, family-friendly, open late...)", "bot");
-  chatContext.greeted = true;
+  setInputEnabled(true);
 };
