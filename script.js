@@ -1,29 +1,32 @@
 let itinerary = [];
-let history = []; // [{query, offset, places}]
+let history = [];
 let lastPlaces = [];
 let lastQuery = "";
 let lastOffset = 0;
 let lastMode = "idle"; // "idle" | "awaiting_action" | "awaiting_place_choice"
 let lastDetailPlaceIdx = null;
 
+// --- Helpers ---
 function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/[&<>"'`=\/]/g, s => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', 
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
   })[s]);
 }
-
+function scrollToBottom() {
+  const mainContent = document.getElementById('mainContent');
+  setTimeout(() => { mainContent.scrollTop = mainContent.scrollHeight; }, 0);
+}
 function setInputEnabled(enabled) {
   document.getElementById('searchInput').disabled = !enabled;
   document.getElementById('searchForm').querySelector('button').disabled = !enabled;
-  document.getElementById('searchInput').classList.toggle('disabled', !enabled);
 }
-
 function clearActionArea() {
   document.getElementById('actionArea').innerHTML = "";
 }
 
+// --- Results rendering ---
 function addResultsHistoryBlock(query, places, offset) {
   const historyArea = document.getElementById('historyArea');
   const block = document.createElement('div');
@@ -51,9 +54,11 @@ function addResultsHistoryBlock(query, places, offset) {
     `;
     block.appendChild(card);
   });
-  historyArea.prepend(block);
+  historyArea.appendChild(block);
+  scrollToBottom();
 }
 
+// --- Itinerary rendering (with notes & time) ---
 function renderItinerary() {
   const itineraryEl = document.getElementById('itineraryList');
   itineraryEl.innerHTML = '';
@@ -64,8 +69,16 @@ function renderItinerary() {
   itinerary.forEach((place, idx) => {
     const li = document.createElement('li');
     li.innerHTML = `
-      <span>${idx + 1}. ${escapeHTML(place.name)}</span>
-      <button class="remove" onclick="removeFromItinerary(${idx})" title="Remove from itinerary">✕</button>
+      <div class="itinerary-header">
+        <span>${idx + 1}. ${escapeHTML(place.name)}</span>
+        <button class="remove" onclick="removeFromItinerary(${idx})" title="Remove from itinerary">✕</button>
+      </div>
+      <div style="font-size:0.97em;">
+        <div><b>Time Spent:</b> <input type="text" placeholder="e.g. 1 hr" value="${escapeHTML(place.timeSpent||'')}" 
+          onchange="updateItineraryTime(${idx}, this.value)" style="width:75px;"/></div>
+        <div><b>Notes:</b> <textarea placeholder="Add notes..." onchange="updateItineraryNotes(${idx}, this.value)">${escapeHTML(place.userNotes||'')}</textarea></div>
+        <a class="itinerary-link" href="${escapeHTML(place.google_maps_url||'#')}" target="_blank">Google Maps</a>
+      </div>
     `;
     itineraryEl.appendChild(li);
   });
@@ -73,16 +86,26 @@ function renderItinerary() {
 window.addToItinerary = function(idx) {
   const place = lastPlaces[idx];
   if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
-    itinerary.push({...place});
+    itinerary.push({
+      ...place,
+      timeSpent: "",
+      userNotes: ""
+    });
     renderItinerary();
-    // no need to rerender the cards, as action buttons are always shown after
   }
 };
 window.removeFromItinerary = function(idx) {
   itinerary.splice(idx, 1);
   renderItinerary();
 };
+window.updateItineraryTime = function(idx, val) {
+  itinerary[idx].timeSpent = val;
+};
+window.updateItineraryNotes = function(idx, val) {
+  itinerary[idx].userNotes = val;
+};
 
+// --- Action UI and State ---
 function renderActionPrompt() {
   lastMode = "awaiting_action";
   setInputEnabled(false);
@@ -100,8 +123,8 @@ function renderActionPrompt() {
     </div>
   `;
   area.appendChild(div);
+  scrollToBottom();
 }
-
 window.actionButtonClicked = function(which) {
   clearActionArea();
   if (which === "new") {
@@ -132,17 +155,19 @@ function renderPlaceChoiceButtons() {
     const btn = document.createElement('button');
     btn.className = 'place-choice-btn';
     btn.innerText = place.name;
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.preventDefault();
       showPlaceDetails(idx);
     };
     btnWrap.appendChild(btn);
   });
   div.appendChild(btnWrap);
   area.appendChild(div);
+  scrollToBottom();
 }
 
+// --- Search and Details Logic ---
 async function handleInput(query) {
-  // Only handle if in 'idle' mode
   if (lastMode !== "idle") return;
   lastQuery = query;
   lastOffset = 0;
@@ -161,8 +186,7 @@ async function fetchAndShowPlaces(query, offset) {
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
     lastPlaces = Array.isArray(data.places) ? data.places : [];
-    history.unshift({ query, offset, places: lastPlaces });
-    if (history.length > 10) history.length = 10;
+    history.push({ query, offset, places: lastPlaces });
     addResultsHistoryBlock(query, lastPlaces, offset);
     renderActionPrompt();
   } catch (e) {
@@ -185,15 +209,62 @@ async function showPlaceDetails(idx) {
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
     const detail = Array.isArray(data.places) && data.places.length ? data.places[0] : place;
-    // For demo, we show as a history block
-    addResultsHistoryBlock(`More about ${detail.name}`, [detail], 0);
+
+    // Render as a "tourism ad" style summary
+    const block = document.createElement('div');
+    block.className = 'history-block';
+    block.innerHTML = `
+      <div class="history-query">Discover: <span style="color:#3146b6;">${escapeHTML(detail.name || place.name || 'Unknown')}</span></div>
+      <div style="font-size:1.08em; margin-bottom:7px; color:#2d464d;">
+        ${makeTourismAdSummary(detail)}
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">${escapeHTML(detail.name || 'Unknown')}</span>
+        </div>
+        <div class="card-rating"><b>Rating:</b> ${typeof detail.rating === 'number' ? detail.rating : 'N/A'} (${detail.user_ratings_total || 0} reviews)</div>
+        <div class="card-address"><b>Location:</b> ${escapeHTML(detail.address || '')}</div>
+        ${detail.review ? `<div class="card-desc">${escapeHTML(detail.review)}</div>` : ""}
+        <a class="card-link" href="${escapeHTML(detail.google_maps_url || '#')}" target="_blank" rel="noopener">View on Google Maps</a>
+      </div>
+    `;
+    document.getElementById('historyArea').appendChild(block);
     renderActionPrompt();
+    scrollToBottom();
   } catch (e) {
     alert("Sorry, couldn't fetch more details right now.");
     renderActionPrompt();
   }
 }
 
+// --- "Tourism ad" summary generator ---
+function makeTourismAdSummary(detail) {
+  // Some fallback values
+  const name = escapeHTML(detail.name || "this place");
+  const rating = typeof detail.rating === 'number' ? `${detail.rating}★` : "well-rated";
+  const address = escapeHTML(detail.address || "Baguio City");
+  const closing = detail.opening_hours && detail.opening_hours.weekday_text
+    ? "Open: " + detail.opening_hours.weekday_text.join(", ")
+    : (detail.hours || "");
+  // Pick a positive review if present
+  let review = "";
+  if (detail.reviews && detail.reviews.length) {
+    // Try to find a 4- or 5-star review
+    let pos = detail.reviews.find(r => r.rating >= 4);
+    if (!pos) pos = detail.reviews[0];
+    if (pos) review = `"${escapeHTML(pos.text)}" – ${escapeHTML(pos.author_name || "a visitor")}`;
+  } else if (detail.review) {
+    review = `"${escapeHTML(detail.review)}"`;
+  }
+
+  return `
+    <b>${name}</b> is a ${rating} destination located at ${address}. ${closing ? closing + ". " : ""}
+    ${review ? `<br><span style="color: #299b2a;">${review}</span>` : ""}
+    <br>Discover why so many people love <b>${name}</b>!
+  `;
+}
+
+// --- Chat/search input at bottom ---
 document.getElementById('searchForm').onsubmit = e => {
   e.preventDefault();
   const inp = document.getElementById('searchInput');
@@ -203,7 +274,7 @@ document.getElementById('searchForm').onsubmit = e => {
   inp.value = "";
 };
 
-// Itinerary PDF (unchanged)
+// --- Itinerary PDF export ---
 function exportItineraryAsPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -241,4 +312,5 @@ function exportItineraryAsPDF() {
 window.onload = () => {
   renderItinerary();
   setInputEnabled(true);
+  scrollToBottom();
 };
