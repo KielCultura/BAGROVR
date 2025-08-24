@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BagRovr Conversational Travel Guide & Itinerary</title>
+  <title>BagRovr - Baguio City Travel Guide & Itinerary</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
   <style>
-    :root { --main-font: 'Lato', Arial, sans-serif; }
     body {
-      font-family: var(--main-font);
+      font-family: 'Lato', Arial, sans-serif;
       background: #f5f8fa;
       margin: 0;
       padding: 0;
@@ -38,70 +37,31 @@
       font-size: 1.1em;
       margin: 0 0 16px 0;
     }
-    .chat-area {
-      max-width: 650px;
-      margin: 0 auto 0 auto;
-      background: #fafdff;
-      border-radius: 8px;
-      border: 1px solid #e2e4ed;
-      padding: 20px 16px 14px 16px;
-      min-height: 300px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .chat-message {
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      margin-bottom: 2px;
-    }
-    .chat-bot {
-      background: #ebefff;
-      color: #222;
-      padding: 10px 15px;
-      border-radius: 12px 12px 12px 0;
-      max-width: 80%;
-      font-size: 1em;
-      box-shadow: 0 1px 5px #4169e115;
-      align-items: flex-start;
-    }
-    .chat-user {
-      background: #4169e1;
-      color: #fff;
-      padding: 10px 15px;
-      border-radius: 12px 12px 0 12px;
-      margin-left: auto;
-      max-width: 80%;
-      font-size: 1em;
-      box-shadow: 0 1px 5px #4169e125;
-      align-items: flex-end;
-    }
-    .chat-input-row {
+    .input-row {
       display: flex;
       gap: 8px;
-      margin-top: 16px;
+      margin-bottom: 18px;
     }
-    .chat-input-row input {
-      flex: 1;
+    .input-row input {
       font-size: 1.08em;
-      padding: 10px 12px;
-      border-radius: 7px;
+      padding: 9px 12px;
+      border-radius: 5px;
       border: 1px solid #bbb;
+      flex: 1;
       background: #f8faff;
       font-family: inherit;
     }
-    .chat-input-row button {
+    .input-row button {
       background: #4169e1;
       color: #fff;
       border: none;
-      border-radius: 7px;
-      padding: 10px 22px;
+      border-radius: 5px;
+      padding: 9px 22px;
       cursor: pointer;
       font-size: 1.08em;
       font-family: inherit;
     }
-    .chat-input-row button:hover {
+    .input-row button:hover {
       background: #3146b6;
     }
     .history-block {
@@ -110,24 +70,12 @@
       border-radius: 8px;
       padding: 8px 11px 7px 11px;
       border: 1px solid #e2e4ed;
-      /*box-shadow: 0 1px 6px #4169e115;*/
     }
     .history-query {
       font-weight: bold;
       font-size: 1em;
       color: #183ba8;
       margin-bottom: 3px;
-    }
-    .place-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .place-number {
-      font-weight: bold;
-      font-size: 1.1em;
-      color: #4169e1;
-      min-width: 2ch;
     }
     .card {
       background: #fafdff;
@@ -193,6 +141,45 @@
       text-decoration: none;
       font-size: 0.95em;
     }
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 16px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: background 0.18s;
+    }
+    .action-btn:hover,
+    .action-btn.selected {
+      background: #3146b6;
+    }
+    .place-choice-btn {
+      margin-right: 8px;
+      margin-bottom: 8px;
+      padding: 8px 13px;
+      border-radius: 6px;
+      border: none;
+      background: #ebefff;
+      color: #183ba8;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .place-choice-btn:hover,
+    .place-choice-btn.selected {
+      background: #4169e1;
+      color: #fff;
+    }
     .itinerary {
       position: fixed;
       right: 25px;
@@ -235,31 +222,6 @@
       align-items: center;
       margin-bottom: 2px;
     }
-    .itinerary-link {
-      color: #4169e1;
-      text-decoration: none;
-      font-size: 0.97em;
-      margin-left: 4px;
-    }
-    .itinerary-btns {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-top: 3px;
-    }
-    .itinerary input[type="text"], .itinerary textarea {
-      font-size: 0.97em;
-      padding: 2px 7px;
-      border-radius: 5px;
-      border: 1px solid #bbb;
-      background: #f8faff;
-    }
-    .itinerary textarea {
-      resize: vertical;
-      min-height: 22px;
-      max-height: 50px;
-      width: 100%;
-    }
     .remove {
       margin-left: auto;
       background: #ff6464;
@@ -287,17 +249,23 @@
       .container { max-width: 99vw; }
       .itinerary { right: 1vw; width: 94vw; }
     }
+    /* Disabled input style */
+    .disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="brand">BagRovr</div>
-    <div class="subtitle">Baguio City Conversational Travel Guide & Itinerary</div>
-    <div class="chat-area" id="chat-area"></div>
-    <form class="chat-input-row" id="chatbot-form" autocomplete="off">
-      <input id="chatbot-input" type="text" placeholder="Type your message here..." autofocus required />
-      <button type="submit">Send</button>
+    <div class="subtitle">Baguio City Travel Guide & Itinerary Planner</div>
+    <form class="input-row" id="searchForm" autocomplete="off">
+      <input id="searchInput" type="text" placeholder="Search for places, e.g. food, parks, shopping..." autofocus required />
+      <button type="submit">Search</button>
     </form>
+    <div id="historyArea"></div>
+    <div id="actionArea"></div>
   </div>
   <div class="itinerary" id="itinerary">
     <h4>My Itinerary</h4>
