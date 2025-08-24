@@ -9,7 +9,7 @@ let lastDetailPlaceIdx = null;
 function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/[&<>"'`=\/]/g, s => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', 
     '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
   })[s]);
 }
