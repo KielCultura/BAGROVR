@@ -1,13 +1,9 @@
 let itinerary = [];
-let lastPlaces = [];
 let chatContext = {
-  awaitingPreferences: true,
-  lastQuery: "",
-  lastBotMsg: "",
-  awaitingReviewRequest: false,
+  history: [],    // [{query, places}]
   lastResults: [],
-  lastPlaceIndex: null,
-  greeted: false
+  greeted: false,
+  awaitingPreferences: true
 };
 
 function escapeHTML(str) {
@@ -31,19 +27,13 @@ function addChatMessage(msg, type = "bot") {
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// Render results as cards (preserve your design)
-function renderResults(places) {
-  const resultsEl = document.getElementById('results');
-  const resultsTitleEl = document.getElementById('resultsTitle');
-  resultsEl.innerHTML = '';
-  lastPlaces = Array.isArray(places) ? places : [];
-  if (!lastPlaces.length) {
-    resultsTitleEl.style.display = "none";
-    resultsEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">No places found.</div>';
-    return;
-  }
-  resultsTitleEl.style.display = "block";
-  lastPlaces.forEach((place, idx) => {
+// Results as stylish history block
+function addResultsHistoryBlock(query, places) {
+  const chatArea = document.getElementById('chat-area');
+  const block = document.createElement('div');
+  block.className = 'history-block';
+  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span></div>`;
+  places.forEach((place, idx) => {
     const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
     const card = document.createElement('div');
     card.className = 'card';
@@ -52,7 +42,7 @@ function renderResults(places) {
         <span class="place-number">${idx + 1}.</span>
         <div class="card-header">
           <span class="card-title">${escapeHTML(place.name || 'Unknown')}</span>
-          <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItinerary(${idx})">
+          <button class="card-btn" ${inItinerary ? 'disabled' : ''} onclick="addToItineraryFromChat(${chatContext.history.length},${idx})">
             ${inItinerary ? 'Added' : 'Add to Itinerary'}
           </button>
         </div>
@@ -62,11 +52,22 @@ function renderResults(places) {
       ${place.review ? `<div class="card-desc">${escapeHTML(place.review)}</div>` : ""}
       <a class="card-link" href="${escapeHTML(place.google_maps_url || '#')}" target="_blank" rel="noopener">View on Google Maps</a>
     `;
-    resultsEl.appendChild(card);
+    block.appendChild(card);
   });
+  chatArea.appendChild(block);
+  chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// Itinerary (preserve your design)
+// Add to itinerary from chat result block
+window.addToItineraryFromChat = function(histIdx, placeIdx) {
+  const place = chatContext.history[histIdx].places[placeIdx];
+  if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
+    itinerary.push({...place});
+    renderItinerary();
+  }
+}
+
+// Itinerary
 function renderItinerary() {
   const itineraryEl = document.getElementById('itineraryList');
   itineraryEl.innerHTML = '';
@@ -83,23 +84,32 @@ function renderItinerary() {
     itineraryEl.appendChild(li);
   });
 }
-window.addToItinerary = function(idx) {
-  const place = lastPlaces[idx];
-  if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
-    itinerary.push(place);
-    renderItinerary();
-    renderResults(lastPlaces);
-  }
-}
 window.removeFromItinerary = function(idx) {
   itinerary.splice(idx, 1);
   renderItinerary();
-  renderResults(lastPlaces);
 }
 
 // Conversational state machine
 async function handleUserInput(input) {
   const low = input.trim().toLowerCase();
+
+  // Place-specific question (e.g. "tell me more about Sunshine Park")
+  const matchPlace = input.match(/(tell me more about|what is|what's|details.*|can you tell me about)\s+(.+)/i);
+  if (matchPlace) {
+    const name = matchPlace[2].trim().toLowerCase();
+    for (let hIdx = chatContext.history.length - 1; hIdx >= 0; hIdx--) {
+      const h = chatContext.history[hIdx];
+      const idx = h.places.findIndex(p => p.name && p.name.toLowerCase().includes(name));
+      if (idx !== -1) {
+        await showPlaceDetails(h.places[idx]);
+        return;
+      }
+    }
+    addChatMessage("I couldn't find that place in our recent results. Try searching again?", "bot");
+    return;
+  }
+
+  // Greet
   if (!chatContext.greeted && ["hi", "hello", "hey"].includes(low)) {
     addChatMessage("Hi! 👋 I'm your BagRovr guide. What kind of places are you looking for in Baguio? (e.g. food, nature, hotels, family-friendly, open late...)", "bot");
     chatContext.greeted = true;
@@ -117,28 +127,32 @@ async function handleUserInput(input) {
       return;
     }
     chatContext.awaitingPreferences = false;
-    chatContext.lastQuery = input;
     await fetchAndShowPlaces(input);
     return;
   }
 
   // After showing places: check for review requests or follow-up refinements
-  if (!chatContext.awaitingPreferences && lastPlaces.length) {
+  if (!chatContext.awaitingPreferences && chatContext.history.length) {
     // 1-star to 5-star review request
     const reviewMatch = input.match(/(\d)[ -]?star/i);
     if (reviewMatch) {
       const rating = parseInt(reviewMatch[1]);
-      const whichPlace = input.match(/first|second|third|(\d+)(st|nd|rd|th)?/i);
+      // Try to match "for the (first|second|third|...)" or by place name
       let idx = 0;
+      const whichPlace = input.match(/for the (first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)/i);
+      const ordinals = ["first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth"];
       if (whichPlace && whichPlace[1]) {
-        idx = parseInt(whichPlace[1], 10) - 1;
-      } else if (/second/.test(input)) {
-        idx = 1;
-      } else if (/third/.test(input)) {
-        idx = 2;
+        idx = ordinals.indexOf(whichPlace[1].toLowerCase());
       }
-      if (lastPlaces[idx]) {
-        await showPlaceReviewsByRating(idx, rating);
+      // fallback: try to match by name in current results
+      if (input.match(/for (.+)/i) && idx === -1) {
+        const nameStr = RegExp.$1.trim().toLowerCase();
+        const lastPlaces = chatContext.history[chatContext.history.length-1].places;
+        idx = lastPlaces.findIndex(p => p.name && p.name.toLowerCase().includes(nameStr));
+        if (idx === -1) idx = 0;
+      }
+      if (chatContext.history.length && chatContext.history[chatContext.history.length-1].places[idx]) {
+        await showPlaceReviewsByRating(chatContext.history[chatContext.history.length-1].places[idx], rating);
       } else {
         addChatMessage("Which place would you like reviews for? (e.g. 'Show me 1-star reviews for the first place')", "bot");
       }
@@ -169,28 +183,27 @@ async function fetchAndShowPlaces(query) {
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
     chatContext.lastResults = data.places;
-    renderResults(Array.isArray(data.places) ? data.places : []);
+    chatContext.history.push({query, places: data.places});
+    addResultsHistoryBlock(query, data.places);
     if (data.summary) addChatMessage(data.summary, "bot");
     else addChatMessage("Here are some places you might like!", "bot");
-    addChatMessage("If you want to see specific reviews (e.g., 'Show me 1-star reviews for the first place'), just ask!", "bot");
+    addChatMessage("If you want to see specific reviews (e.g., 'Show me 1-star reviews for the first place'), or learn more about any place, just ask!", "bot");
   } catch (e) {
     addChatMessage("Sorry, I couldn't find any places right now. Please try again.", "bot");
-    renderResults([]);
   }
 }
 
-// Show reviews of a certain rating for a selected place (calls your API directly)
-async function showPlaceReviewsByRating(idx, rating) {
-  const place = lastPlaces[idx];
-  if (!place) {
-    addChatMessage("Sorry, I couldn't find that place.", "bot");
-    return;
-  }
+// Show more details about a place (as a history block)
+async function showPlaceDetails(place) {
+  addChatMessage(`Here's more about ${place.name}:`, "bot");
+  addResultsHistoryBlock(`More about ${place.name}`, [place]);
+  // Optionally, fetch additional details from your backend if needed
+}
+
+// Show reviews of a certain rating for a place (calls your API directly)
+async function showPlaceReviewsByRating(place, rating) {
   addChatMessage(`Fetching ${rating}-star reviews for ${place.name}...`, "bot");
   try {
-    // Fetch place details
-    const apiKey = ""; // If you proxy this in your backend, you don't need a key here.
-    // We'll call your backend with a special term to trigger review-only mode
     const resp = await fetch('/api/google-places-groq', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -199,13 +212,13 @@ async function showPlaceReviewsByRating(idx, rating) {
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
     // Find reviews with the given rating
-    const reviews = (data.places && data.places[0] && data.places[0].reviews)
-      ? data.places[0].reviews : [];
-    const filtered = reviews
-      ? reviews.filter(r => Math.round(r.rating) == rating)
-      : [];
-
-    if (filtered && filtered.length) {
+    let reviews = [];
+    if (data.places && data.places.length) {
+      // Try to get all available reviews (if your API returns .reviews)
+      reviews = data.places[0].reviews || [];
+    }
+    const filtered = reviews.filter(r => Math.round(r.rating) == rating);
+    if (filtered.length) {
       filtered.slice(0, 3).forEach(r =>
         addChatMessage(`"${r.text}"\n– ${r.author_name || "Anonymous"}`, "bot")
       );
