@@ -110,3 +110,78 @@ window.onload = () => {
   renderItinerary();
   renderResults([]);
 };
+// ...your existing code...
+
+// === Chatbot logic ===
+function addChatMessage(msg, from = "bot") {
+  const box = document.getElementById('chatbot-messages');
+  const div = document.createElement('div');
+  div.style.maxWidth = "80%";
+  div.style.alignSelf = from === "user" ? "flex-end" : "flex-start";
+  div.style.background = from === "user" ? "#e7f0ff" : "#f2f2fc";
+  div.style.color = "#222";
+  div.style.padding = "8px 12px";
+  div.style.borderRadius = "10px";
+  div.innerText = msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function chatbotParseIntent(text) {
+  // Simple intent extraction — expand as needed!
+  let query = "";
+  let lower = text.toLowerCase();
+
+  if (lower.includes("family") || lower.includes("kid")) query += "family friendly ";
+  if (lower.includes("nature") || lower.includes("park")) query += "nature ";
+  if (lower.includes("food") || lower.includes("eat")) query += "food ";
+  if (lower.includes("open late") || lower.includes("night")) query += "open late ";
+  if (lower.includes("hotel") || lower.includes("stay")) query += "hotels ";
+
+  // If no special intent, just use text
+  if (!query) query = text;
+
+  return query.trim();
+}
+
+async function chatbotHandleInput(text) {
+  addChatMessage("Let me find the best places for you...", "bot");
+  const query = chatbotParseIntent(text);
+  // Call existing fetchResults, then show AI summary if available
+  try {
+    const resp = await fetch('/api/google-places-groq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ term: query })
+    });
+    if (!resp.ok) throw new Error(`API error (${resp.status})`);
+    const data = await resp.json();
+    if (data.summary) addChatMessage(data.summary, "bot");
+    else addChatMessage("Here are some great places I found!", "bot");
+    renderResults(Array.isArray(data.places) ? data.places : []);
+  } catch (e) {
+    addChatMessage("Sorry, I couldn't find any places right now. Please try again.", "bot");
+  }
+}
+
+document.getElementById('chatbot-form').onsubmit = e => {
+  e.preventDefault();
+  const inp = document.getElementById('chatbot-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  addChatMessage(val, "user");
+  chatbotHandleInput(val);
+  inp.value = "";
+};
+
+document.getElementById('chatbot-toggle').onclick = () => {
+  const box = document.getElementById('chatbot-box');
+  box.style.display = (box.style.display === "flex") ? "none" : "flex";
+  if (box.style.display === "flex") {
+    setTimeout(() => document.getElementById('chatbot-input').focus(), 100);
+    if (!box.getAttribute('data-greeted')) {
+      addChatMessage("Hi! 👋 I'm your BagRovr chatbot. Tell me what you want to do in Baguio, and I'll recommend the best places. (E.g. 'I want food spots for kids open late')");
+      box.setAttribute('data-greeted', '1');
+    }
+  }
+};
