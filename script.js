@@ -1,5 +1,14 @@
 let itinerary = [];
 let lastPlaces = [];
+let chatContext = {
+  awaitingPreferences: true,
+  lastQuery: "",
+  lastBotMsg: "",
+  awaitingReviewRequest: false,
+  lastResults: [],
+  lastPlaceIndex: null,
+  greeted: false
+};
 
 function escapeHTML(str) {
   if (!str) return '';
@@ -9,6 +18,20 @@ function escapeHTML(str) {
   })[s]);
 }
 
+// Chat UI
+function addChatMessage(msg, type = "bot") {
+  const chatArea = document.getElementById('chat-area');
+  const row = document.createElement('div');
+  row.className = 'chat-message';
+  const bubble = document.createElement('div');
+  bubble.className = type === "bot" ? 'chat-bot' : 'chat-user';
+  bubble.innerText = msg;
+  row.appendChild(bubble);
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// Render results as cards (preserve your design)
 function renderResults(places) {
   const resultsEl = document.getElementById('results');
   const resultsTitleEl = document.getElementById('resultsTitle');
@@ -43,6 +66,7 @@ function renderResults(places) {
   });
 }
 
+// Itinerary (preserve your design)
 function renderItinerary() {
   const itineraryEl = document.getElementById('itineraryList');
   itineraryEl.innerHTML = '';
@@ -59,7 +83,6 @@ function renderItinerary() {
     itineraryEl.appendChild(li);
   });
 }
-
 window.addToItinerary = function(idx) {
   const place = lastPlaces[idx];
   if (place && !itinerary.some(x => x.name === place.name && x.address === place.address)) {
@@ -74,39 +97,69 @@ window.removeFromItinerary = function(idx) {
   renderResults(lastPlaces);
 }
 
-// === Chatbot logic ===
-function addChatMessage(msg, from = "bot") {
-  const box = document.getElementById('chatbot-messages');
-  const div = document.createElement('div');
-  div.style.maxWidth = "80%";
-  div.style.alignSelf = from === "user" ? "flex-end" : "flex-start";
-  div.style.background = from === "user" ? "#e7f0ff" : "#f2f2fc";
-  div.style.color = "#222";
-  div.style.padding = "8px 12px";
-  div.style.borderRadius = "10px";
-  div.innerText = msg;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
+// Conversational state machine
+async function handleUserInput(input) {
+  const low = input.trim().toLowerCase();
+  if (!chatContext.greeted && ["hi", "hello", "hey"].includes(low)) {
+    addChatMessage("Hi! 👋 I'm your BagRovr guide. What kind of places are you looking for in Baguio? (e.g. food, nature, hotels, family-friendly, open late...)", "bot");
+    chatContext.greeted = true;
+    chatContext.awaitingPreferences = true;
+    return;
+  }
+
+  // If waiting for preferences
+  if (chatContext.awaitingPreferences) {
+    // Try to extract intent
+    const keywords = ["food", "eat", "restaurant", "cafe", "park", "nature", "family", "kid", "open late", "hotel", "stay", "museum", "shopping", "mall", "art", "bar", "pub", "night"];
+    const found = keywords.some(kw => low.includes(kw));
+    if (!found) {
+      addChatMessage("Could you tell me more about what kind of place or experience you want? (e.g. 'Nature parks', 'family-friendly food', 'hotels open late')", "bot");
+      return;
+    }
+    chatContext.awaitingPreferences = false;
+    chatContext.lastQuery = input;
+    await fetchAndShowPlaces(input);
+    return;
+  }
+
+  // After showing places: check for review requests or follow-up refinements
+  if (!chatContext.awaitingPreferences && lastPlaces.length) {
+    // 1-star to 5-star review request
+    const reviewMatch = input.match(/(\d)[ -]?star/i);
+    if (reviewMatch) {
+      const rating = parseInt(reviewMatch[1]);
+      const whichPlace = input.match(/first|second|third|(\d+)(st|nd|rd|th)?/i);
+      let idx = 0;
+      if (whichPlace && whichPlace[1]) {
+        idx = parseInt(whichPlace[1], 10) - 1;
+      } else if (/second/.test(input)) {
+        idx = 1;
+      } else if (/third/.test(input)) {
+        idx = 2;
+      }
+      if (lastPlaces[idx]) {
+        await showPlaceReviewsByRating(idx, rating);
+      } else {
+        addChatMessage("Which place would you like reviews for? (e.g. 'Show me 1-star reviews for the first place')", "bot");
+      }
+      return;
+    }
+    // New preferences/refinement
+    if (input.match(/more|else|another|different|change|other/)) {
+      addChatMessage("Sure! What type of places do you want this time? (e.g. food, parks, hotels, etc.)", "bot");
+      chatContext.awaitingPreferences = true;
+      return;
+    }
+    // Otherwise, treat as new preferences
+    chatContext.awaitingPreferences = true;
+    await handleUserInput(input);
+    return;
+  }
 }
 
-function chatbotParseIntent(text) {
-  let query = "";
-  let lower = text.toLowerCase();
-
-  if (lower.includes("family") || lower.includes("kid")) query += "family friendly ";
-  if (lower.includes("nature") || lower.includes("park")) query += "nature ";
-  if (lower.includes("food") || lower.includes("eat")) query += "food ";
-  if (lower.includes("open late") || lower.includes("night")) query += "open late ";
-  if (lower.includes("hotel") || lower.includes("stay")) query += "hotels ";
-
-  if (!query) query = text;
-
-  return query.trim();
-}
-
-async function chatbotHandleInput(text) {
+// Fetch and show places (calls your API)
+async function fetchAndShowPlaces(query) {
   addChatMessage("Let me find the best places for you...", "bot");
-  const query = chatbotParseIntent(text);
   try {
     const resp = await fetch('/api/google-places-groq', {
       method: 'POST',
@@ -115,41 +168,71 @@ async function chatbotHandleInput(text) {
     });
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
-    if (data.summary) addChatMessage(data.summary, "bot");
-    else addChatMessage("Here are some great places I found!", "bot");
+    chatContext.lastResults = data.places;
     renderResults(Array.isArray(data.places) ? data.places : []);
+    if (data.summary) addChatMessage(data.summary, "bot");
+    else addChatMessage("Here are some places you might like!", "bot");
+    addChatMessage("If you want to see specific reviews (e.g., 'Show me 1-star reviews for the first place'), just ask!", "bot");
   } catch (e) {
     addChatMessage("Sorry, I couldn't find any places right now. Please try again.", "bot");
     renderResults([]);
   }
 }
 
+// Show reviews of a certain rating for a selected place (calls your API directly)
+async function showPlaceReviewsByRating(idx, rating) {
+  const place = lastPlaces[idx];
+  if (!place) {
+    addChatMessage("Sorry, I couldn't find that place.", "bot");
+    return;
+  }
+  addChatMessage(`Fetching ${rating}-star reviews for ${place.name}...`, "bot");
+  try {
+    // Fetch place details
+    const apiKey = ""; // If you proxy this in your backend, you don't need a key here.
+    // We'll call your backend with a special term to trigger review-only mode
+    const resp = await fetch('/api/google-places-groq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ term: `${place.name} in Baguio City` })
+    });
+    if (!resp.ok) throw new Error(`API error (${resp.status})`);
+    const data = await resp.json();
+    // Find reviews with the given rating
+    const reviews = (data.places && data.places[0] && data.places[0].reviews)
+      ? data.places[0].reviews : [];
+    const filtered = reviews
+      ? reviews.filter(r => Math.round(r.rating) == rating)
+      : [];
+
+    if (filtered && filtered.length) {
+      filtered.slice(0, 3).forEach(r =>
+        addChatMessage(`"${r.text}"\n– ${r.author_name || "Anonymous"}`, "bot")
+      );
+    } else {
+      addChatMessage(`No ${rating}-star reviews found for ${place.name}.`, "bot");
+    }
+  } catch (e) {
+    addChatMessage("Sorry, couldn't fetch reviews at this time.", "bot");
+  }
+}
+
+// Chat input handling
 document.getElementById('chatbot-form').onsubmit = e => {
   e.preventDefault();
   const inp = document.getElementById('chatbot-input');
   const val = inp.value.trim();
   if (!val) return;
   addChatMessage(val, "user");
-  chatbotHandleInput(val);
+  handleUserInput(val);
   inp.value = "";
 };
 
-document.getElementById('chatbot-toggle').onclick = () => {
-  const box = document.getElementById('chatbot-box');
-  box.style.display = (box.style.display === "flex") ? "none" : "flex";
-  if (box.style.display === "flex") {
-    setTimeout(() => document.getElementById('chatbot-input').focus(), 100);
-    if (!box.getAttribute('data-greeted')) {
-      addChatMessage("Hi! 👋 I'm your BagRovr chatbot. Tell me what you want to do in Baguio, and I'll recommend the best places. (E.g. 'I want food spots for kids open late')");
-      box.setAttribute('data-greeted', '1');
-    }
-  }
-};
-
+// Itinerary PDF (unchanged)
 function exportItineraryAsPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const font = 'helvetica'; // Set your preferred font
+  const font = 'helvetica';
   doc.setFont(font);
   doc.setFontSize(18);
   doc.text("My Baguio Itinerary", 20, 20);
@@ -182,5 +265,6 @@ function exportItineraryAsPDF() {
 
 window.onload = () => {
   renderItinerary();
-  renderResults([]);
+  addChatMessage("Hi! 👋 I'm your BagRovr guide. What kind of places are you looking for in Baguio? (e.g. food, nature, hotels, family-friendly, open late...)", "bot");
+  chatContext.greeted = true;
 };
