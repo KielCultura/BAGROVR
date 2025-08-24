@@ -104,18 +104,30 @@
     .chat-input-row button:hover {
       background: #3146b6;
     }
-    .results-title {
-      font-weight: bold;
-      color: #4169e1;
-      margin: 22px 0 8px 0;
-      font-size: 1.12em;
-      letter-spacing: 1px;
+    .history-block {
+      margin-bottom: 18px;
+      background: #f5f7fa;
+      border-radius: 8px;
+      padding: 8px 11px 7px 11px;
+      border: 1px solid #e2e4ed;
+      /*box-shadow: 0 1px 6px #4169e115;*/
     }
-    .results {
-      margin: 0 0 17px 0;
+    .history-query {
+      font-weight: bold;
+      font-size: 1em;
+      color: #183ba8;
+      margin-bottom: 3px;
+    }
+    .place-row {
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      gap: 8px;
+    }
+    .place-number {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #4169e1;
+      min-width: 2ch;
     }
     .card {
       background: #fafdff;
@@ -286,8 +298,6 @@
       <input id="chatbot-input" type="text" placeholder="Type your message here..." autofocus required />
       <button type="submit">Send</button>
     </form>
-    <div class="results-title" id="resultsTitle" style="display:none;">Results</div>
-    <div class="results" id="results"></div>
   </div>
   <div class="itinerary" id="itinerary">
     <h4>My Itinerary</h4>
