@@ -314,3 +314,58 @@ window.onload = () => {
   setInputEnabled(true);
   scrollToBottom();
 };
+// --- Mode Switching ---
+document.getElementById('autoModeBtn').onclick = function() {
+  document.getElementById('autoModeForm').style.display = 'block';
+  document.getElementById('manualModeArea').style.display = 'none';
+  this.classList.add('active');
+  document.getElementById('manualModeBtn').classList.remove('active');
+};
+document.getElementById('manualModeBtn').onclick = function() {
+  document.getElementById('autoModeForm').style.display = 'none';
+  document.getElementById('manualModeArea').style.display = 'block';
+  this.classList.add('active');
+  document.getElementById('autoModeBtn').classList.remove('active');
+};
+
+// --- Automatic Mode Form Submission ---
+document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const prompt = form.prompt.value;
+  const startTime = form.startTime.value;
+  const endTime = form.endTime.value;
+  const startLocation = form.startLocation.value;
+  const endLocation = form.endLocation.value;
+
+  document.getElementById('itineraryResults').innerHTML = "<p>Generating your itinerary...</p>";
+
+  // Call your backend API
+  const res = await fetch('/api/automatic-itinerary', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({prompt, startTime, endTime, startLocation, endLocation})
+  });
+  const data = await res.json();
+
+  // Render results
+  renderAutomaticItinerary(data.itinerary || []);
+};
+function renderAutomaticItinerary(itinerary) {
+  const container = document.getElementById('itineraryResults');
+  if (!itinerary.length) {
+    container.innerHTML = "<p>No itinerary found. Try updating your preferences.</p>";
+    return;
+  }
+  container.innerHTML = itinerary.map((stop, idx) => `
+    <div class="card">
+      <div><b>${stop.time}</b> — <span class="card-title">${stop.name}</span></div>
+      <div>${stop.description}</div>
+      <div><b>Address:</b> ${stop.address}</div>
+      <a class="card-link" href="${stop.google_maps_url}" target="_blank">View on Google Maps</a>
+      <button class="card-btn" onclick="addToItineraryAuto(${idx})">Add to Itinerary</button>
+    </div>
+  `).join('');
+}
+
+// TODO: Implement addToItineraryAuto(idx)
