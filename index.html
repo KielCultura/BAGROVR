@@ -292,6 +292,7 @@
       .itinerary { right: 1vw; width: 94vw; }
     }
   </style>
+</head>
   <body>
   <div class="container">
     <div class="brand">BagRovr Itinerary Maker</div>
@@ -299,6 +300,8 @@
       <button id="autoModeBtn" class="mode-btn active">Automatic Mode</button>
       <button id="manualModeBtn" class="mode-btn">Manual Mode</button>
     </div>
+
+    <!-- Automatic Mode UI -->
     <div id="autoModeForm" style="display:block;">
       <form id="automaticItineraryForm">
         <label>
@@ -328,11 +331,28 @@
         <br>
         <button type="submit" class="card-btn">Generate Itinerary</button>
       </form>
+      <div id="itineraryResults"></div>
     </div>
+
+    <!-- Manual Mode UI -->
     <div id="manualModeArea" style="display:none;">
-      <!-- Manual Top 10 Generator UI goes here (existing) -->
+      <!-- Your Manual Top 10 Generator UI goes here -->
+      <form id="searchForm" style="margin-bottom:12px;">
+        <input type="text" id="searchInput" placeholder="Search for places (e.g. museums, restaurants)" autocomplete="off" required>
+        <button type="submit">Search</button>
+      </form>
+      <div id="mainContent">
+        <div id="historyArea"></div>
+        <div id="actionArea"></div>
+      </div>
     </div>
-    <div id="itineraryResults"></div>
+
+    <!-- Itinerary Sidebar always visible -->
+    <div class="itinerary" id="itineraryBox">
+      <h4>My Itinerary</h4>
+      <ul id="itineraryList"></ul>
+      <button class="export-btn" onclick="exportItineraryAsPDF()">Export as PDF</button>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>
