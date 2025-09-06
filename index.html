@@ -292,24 +292,47 @@
       .itinerary { right: 1vw; width: 94vw; }
     }
   </style>
-</head>
-<body>
+  <body>
   <div class="container">
-    <div class="brand">BagRovr</div>
-    <div class="subtitle">Baguio City Travel Guide & Itinerary Planner</div>
-    <div id="mainContent">
-      <div id="historyArea" style="display:flex; flex-direction: column; gap: 0;"></div>
-      <div id="actionArea"></div>
+    <div class="brand">BagRovr Itinerary Maker</div>
+    <div class="subtitle">
+      <button id="autoModeBtn" class="mode-btn active">Automatic Mode</button>
+      <button id="manualModeBtn" class="mode-btn">Manual Mode</button>
     </div>
-    <form class="input-row" id="searchForm" autocomplete="off">
-      <input id="searchInput" type="text" placeholder="Search for places, e.g. food, parks, shopping..." autofocus required />
-      <button type="submit">Search</button>
-    </form>
-  </div>
-  <div class="itinerary" id="itinerary">
-    <h4>My Itinerary</h4>
-    <ul id="itineraryList"></ul>
-    <button class="export-btn" onclick="exportItineraryAsPDF()">Export as PDF</button>
+    <div id="autoModeForm" style="display:block;">
+      <form id="automaticItineraryForm">
+        <label>
+          What would you like to do on your trip?<br>
+          <textarea name="prompt" required rows="2" style="width:100%;"></textarea>
+        </label>
+        <br>
+        <label>
+          Start Time:<br>
+          <input type="time" name="startTime" required>
+        </label>
+        <br>
+        <label>
+          End Time:<br>
+          <input type="time" name="endTime" required>
+        </label>
+        <br>
+        <label>
+          Start Location:<br>
+          <input type="text" name="startLocation" required placeholder="e.g. Hotel XYZ">
+        </label>
+        <br>
+        <label>
+          End Location:<br>
+          <input type="text" name="endLocation" required placeholder="e.g. Hotel XYZ">
+        </label>
+        <br>
+        <button type="submit" class="card-btn">Generate Itinerary</button>
+      </form>
+    </div>
+    <div id="manualModeArea" style="display:none;">
+      <!-- Manual Top 10 Generator UI goes here (existing) -->
+    </div>
+    <div id="itineraryResults"></div>
   </div>
   <script src="script.js"></script>
 </body>
