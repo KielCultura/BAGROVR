@@ -1,3 +1,4 @@
+// --- Initialization ---
 let itinerary = [];
 let history = [];
 let lastPlaces = [];
@@ -5,6 +6,28 @@ let lastQuery = "";
 let lastOffset = 0;
 let lastMode = "idle"; // "idle" | "awaiting_action" | "awaiting_place_choice"
 let lastDetailPlaceIdx = null;
+let autoModeItinerary = []; // stores results from automatic mode
+
+// --- Mode Switching ---
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('autoModeBtn').onclick = function() {
+    document.getElementById('autoModeForm').style.display = 'block';
+    document.getElementById('manualModeArea').style.display = 'none';
+    this.classList.add('active');
+    document.getElementById('manualModeBtn').classList.remove('active');
+    document.getElementById('itineraryResults').style.display = 'block';
+  };
+  document.getElementById('manualModeBtn').onclick = function() {
+    document.getElementById('autoModeForm').style.display = 'none';
+    document.getElementById('manualModeArea').style.display = 'block';
+    this.classList.add('active');
+    document.getElementById('autoModeBtn').classList.remove('active');
+    document.getElementById('itineraryResults').style.display = 'none';
+  };
+  renderItinerary();
+  setInputEnabled(true);
+  scrollToBottom();
+});
 
 // --- Helpers ---
 function escapeHTML(str) {
@@ -16,17 +39,21 @@ function escapeHTML(str) {
 }
 function scrollToBottom() {
   const mainContent = document.getElementById('mainContent');
-  setTimeout(() => { mainContent.scrollTop = mainContent.scrollHeight; }, 0);
+  if (mainContent)
+    setTimeout(() => { mainContent.scrollTop = mainContent.scrollHeight; }, 0);
 }
 function setInputEnabled(enabled) {
-  document.getElementById('searchInput').disabled = !enabled;
-  document.getElementById('searchForm').querySelector('button').disabled = !enabled;
+  const input = document.getElementById('searchInput');
+  const form = document.getElementById('searchForm');
+  if (input) input.disabled = !enabled;
+  if (form) form.querySelector('button').disabled = !enabled;
 }
 function clearActionArea() {
-  document.getElementById('actionArea').innerHTML = "";
+  const area = document.getElementById('actionArea');
+  if (area) area.innerHTML = "";
 }
 
-// --- Results rendering ---
+// --- Results rendering (manual mode) ---
 function addResultsHistoryBlock(query, places, offset) {
   const historyArea = document.getElementById('historyArea');
   const block = document.createElement('div');
@@ -140,7 +167,6 @@ window.actionButtonClicked = function(which) {
     renderPlaceChoiceButtons();
   }
 };
-
 function renderPlaceChoiceButtons() {
   clearActionArea();
   const area = document.getElementById('actionArea');
@@ -166,14 +192,13 @@ function renderPlaceChoiceButtons() {
   scrollToBottom();
 }
 
-// --- Search and Details Logic ---
+// --- Search and Details Logic (manual mode) ---
 async function handleInput(query) {
   if (lastMode !== "idle") return;
   lastQuery = query;
   lastOffset = 0;
   await fetchAndShowPlaces(lastQuery, lastOffset);
 }
-
 async function fetchAndShowPlaces(query, offset) {
   try {
     setInputEnabled(false);
@@ -194,7 +219,6 @@ async function fetchAndShowPlaces(query, offset) {
     setInputEnabled(true);
   }
 }
-
 async function showPlaceDetails(idx) {
   setInputEnabled(false);
   clearActionArea();
@@ -209,7 +233,6 @@ async function showPlaceDetails(idx) {
     if (!resp.ok) throw new Error(`API error (${resp.status})`);
     const data = await resp.json();
     const detail = Array.isArray(data.places) && data.places.length ? data.places[0] : place;
-
     // Render as a "tourism ad" style summary
     const block = document.createElement('div');
     block.className = 'history-block';
@@ -256,7 +279,6 @@ function makeTourismAdSummary(detail) {
   } else if (detail.review) {
     review = `"${escapeHTML(detail.review)}"`;
   }
-
   return `
     <b>${name}</b> is a ${rating} destination located at ${address}. ${closing ? closing + ". " : ""}
     ${review ? `<br><span style="color: #299b2a;">${review}</span>` : ""}
@@ -264,7 +286,7 @@ function makeTourismAdSummary(detail) {
   `;
 }
 
-// --- Chat/search input at bottom ---
+// --- Manual Chat/search input at bottom ---
 document.getElementById('searchForm').onsubmit = e => {
   e.preventDefault();
   const inp = document.getElementById('searchInput');
@@ -309,25 +331,6 @@ function exportItineraryAsPDF() {
   doc.save("bagrovr-itinerary.pdf");
 }
 
-window.onload = () => {
-  renderItinerary();
-  setInputEnabled(true);
-  scrollToBottom();
-};
-// --- Mode Switching ---
-document.getElementById('autoModeBtn').onclick = function() {
-  document.getElementById('autoModeForm').style.display = 'block';
-  document.getElementById('manualModeArea').style.display = 'none';
-  this.classList.add('active');
-  document.getElementById('manualModeBtn').classList.remove('active');
-};
-document.getElementById('manualModeBtn').onclick = function() {
-  document.getElementById('autoModeForm').style.display = 'none';
-  document.getElementById('manualModeArea').style.display = 'block';
-  this.classList.add('active');
-  document.getElementById('autoModeBtn').classList.remove('active');
-};
-
 // --- Automatic Mode Form Submission ---
 document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   e.preventDefault();
@@ -348,24 +351,38 @@ document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   });
   const data = await res.json();
 
-  // Render results
-  renderAutomaticItinerary(data.itinerary || []);
+  // Store and render results
+  autoModeItinerary = data.itinerary || [];
+  renderAutomaticItinerary(autoModeItinerary);
 };
-function renderAutomaticItinerary(itinerary) {
+
+// --- Automatic itinerary renderer ---
+function renderAutomaticItinerary(itineraryArr) {
   const container = document.getElementById('itineraryResults');
-  if (!itinerary.length) {
+  if (!itineraryArr.length) {
     container.innerHTML = "<p>No itinerary found. Try updating your preferences.</p>";
     return;
   }
-  container.innerHTML = itinerary.map((stop, idx) => `
+  container.innerHTML = itineraryArr.map((stop, idx) => `
     <div class="card">
-      <div><b>${stop.time}</b> — <span class="card-title">${stop.name}</span></div>
-      <div>${stop.description}</div>
-      <div><b>Address:</b> ${stop.address}</div>
-      <a class="card-link" href="${stop.google_maps_url}" target="_blank">View on Google Maps</a>
+      <div><b>${escapeHTML(stop.time || "")}</b> — <span class="card-title">${escapeHTML(stop.name || "")}</span></div>
+      <div>${escapeHTML(stop.description || "")}</div>
+      <div><b>Address:</b> ${escapeHTML(stop.address || "")}</div>
+      <a class="card-link" href="${escapeHTML(stop.google_maps_url || "#")}" target="_blank">View on Google Maps</a>
       <button class="card-btn" onclick="addToItineraryAuto(${idx})">Add to Itinerary</button>
     </div>
   `).join('');
 }
 
-// TODO: Implement addToItineraryAuto(idx)
+// --- Add to Itinerary from Automatic Mode ---
+window.addToItineraryAuto = function(idx) {
+  const stop = autoModeItinerary[idx];
+  if (stop && !itinerary.some(x => x.name === stop.name && x.address === stop.address)) {
+    itinerary.push({
+      ...stop,
+      timeSpent: "",
+      userNotes: ""
+    });
+    renderItinerary();
+  }
+};
