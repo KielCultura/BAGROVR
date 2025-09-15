@@ -355,5 +355,22 @@
     </div>
   </div>
   <script src="script.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY&libraries=places"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var startInput = document.querySelector('input[name="startLocation"]');
+    var endInput = document.querySelector('input[name="endLocation"]');
+    if (window.google && google.maps && google.maps.places) {
+      new google.maps.places.Autocomplete(startInput, {
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: "ph" }
+      });
+      new google.maps.places.Autocomplete(endInput, {
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: "ph" }
+      });
+    }
+  });
+</script>
 </body>
 </html>
