@@ -198,7 +198,6 @@
       opacity: 0.5;
       pointer-events: none;
     }
-    /* --- Added container for autocomplete --- */
     .autocomplete-row {
       background: #f8faff;
       border-radius: 5px;
@@ -311,49 +310,51 @@
     </div>
 
     <!-- Automatic Mode UI -->
-   <form id="automaticItineraryForm">
-  <label>
-    What would you like to do on your trip?<br>
-    <textarea name="prompt" required rows="2" style="width:100%;"></textarea>
-  </label>
-  <br>
-  <label>
-    Start Time:<br>
-    <input type="time" name="startTime" required>
-  </label>
-  <br>
-  <label>
-    End Time:<br>
-    <input type="time" name="endTime" required>
-  </label>
-  <br>
-  <label>Start Location:<br>
-    <div class="autocomplete-row">
-      <gmp-place-autocomplete
-        id="startAutocomplete"
-        style="width:100%;"
-        placeholder="Start Location"
-        locationBias="circle:20000@16.4023,120.5960"
-      ></gmp-place-autocomplete>
+    <div id="autoModeForm" style="display:block;">
+      <form id="automaticItineraryForm">
+        <label>
+          What would you like to do on your trip?<br>
+          <textarea name="prompt" required rows="2" style="width:100%;"></textarea>
+        </label>
+        <br>
+        <label>
+          Start Time:<br>
+          <input type="time" name="startTime" required>
+        </label>
+        <br>
+        <label>
+          End Time:<br>
+          <input type="time" name="endTime" required>
+        </label>
+        <br>
+        <label>Start Location:<br>
+          <div class="autocomplete-row">
+            <gmp-place-autocomplete
+              id="startAutocomplete"
+              style="width:100%;"
+              placeholder="Start Location"
+              locationBias="circle:20000@16.4023,120.5960"
+            ></gmp-place-autocomplete>
+          </div>
+          <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
+        </label>
+        <br>
+        <label>End Location:<br>
+          <div class="autocomplete-row">
+            <gmp-place-autocomplete
+              id="endAutocomplete"
+              style="width:100%;"
+              placeholder="End Location"
+              locationBias="circle:20000@16.4023,120.5960"
+            ></gmp-place-autocomplete>
+          </div>
+          <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
+        </label>
+        <br>
+        <button type="submit" class="card-btn" id="generateBtn" disabled>Generate Itinerary</button>
+      </form>
+      <div id="itineraryResults"></div>
     </div>
-    <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
-  </label>
-  <br>
-  <label>End Location:<br>
-    <div class="autocomplete-row">
-      <gmp-place-autocomplete
-        id="endAutocomplete"
-        style="width:100%;"
-        placeholder="End Location"
-        locationBias="circle:20000@16.4023,120.5960"
-      ></gmp-place-autocomplete>
-    </div>
-    <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
-  </label>
-  <br>
-  <button type="submit" class="card-btn" id="generateBtn" disabled>Generate Itinerary</button>
-</form>
-<div id="itineraryResults"></div>
 
     <!-- Manual Mode UI -->
     <div id="manualModeArea" style="display:none;">
@@ -373,8 +374,7 @@
       <button class="export-btn" onclick="exportItineraryAsPDF()">Export as PDF</button>
     </div>
   </div>
-
   <script src="script.js"></script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY&libraries=places,placeswidget"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
 </body>
 </html>
