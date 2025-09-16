@@ -367,16 +367,8 @@ document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   const startTime = form.startTime.value;
   const endTime = form.endTime.value;
 
-  // Use <gmp-place-autocomplete> selections
-  if (!startPlace || !endPlace) {
-    document.getElementById('itineraryResults').innerHTML =
-      "<div style='color:red;'>Please select valid start and end locations using the autocomplete boxes.</div>";
-    updateGenerateBtnState();
-    return;
-  }
-
   document.getElementById('itineraryResults').innerHTML = "<p>Generating your itinerary...</p>";
-
+  
   // Call your backend API
   const res = await fetch('/api/automatic-itinerary', {
     method: 'POST',
