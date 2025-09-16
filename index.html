@@ -8,7 +8,298 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
   <style>
-    /* ... your existing CSS ... */
+    body {
+      font-family: 'Lato', Arial, sans-serif;
+      background: #f5f8fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: 40px auto 0;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px #0001;
+      padding: 32px 24px 0 24px;
+      position: relative;
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+    }
+    .brand {
+      text-align: center;
+      font-weight: 700;
+      font-size: 2.1em;
+      color: #4169e1;
+      margin-bottom: 2px;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #444;
+      font-size: 1.1em;
+      margin: 0 0 16px 0;
+    }
+    #mainContent {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .history-block {
+      margin: 0 0 18px 0;
+      background: #f5f7fa;
+      border-radius: 8px;
+      padding: 8px 11px 7px 11px;
+      border: 1px solid #e2e4ed;
+    }
+    .history-query {
+      font-weight: bold;
+      font-size: 1em;
+      color: #183ba8;
+      margin-bottom: 3px;
+    }
+    .card {
+      background: #fafdff;
+      border: 1px solid #e2e4ed;
+      border-radius: 8px;
+      padding: 13px 15px 10px 15px;
+      width: 100%;
+      box-shadow: 0 2px 8px #4169e119;
+      margin-bottom: 8px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+    .card-title {
+      font-size: 1.08em;
+      color: #183ba8;
+      font-weight: 700;
+      margin-right: 5px;
+    }
+    .card-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 0.97em;
+      font-family: inherit;
+      margin-left: 8px;
+      transition: background 0.2s;
+    }
+    .card-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .card-btn:hover:not(:disabled) {
+      background: #3146b6;
+    }
+    .card-rating {
+      font-size: 0.98em;
+      margin-bottom: 2px;
+      color: #373a4a;
+    }
+    .card-address {
+      margin-bottom: 2px;
+      color: #616487;
+      font-size: 0.97em;
+    }
+    .card-desc {
+      font-style: italic;
+      color: #299b2a;
+      font-size: 0.93em;
+      margin-bottom: 2px;
+      background: #eafbe6;
+      border-radius: 6px;
+      padding: 5px 9px;
+    }
+    .card-link {
+      color: #4169e1;
+      text-decoration: none;
+      font-size: 0.95em;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 16px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: background 0.18s;
+    }
+    .action-btn:hover,
+    .action-btn.selected {
+      background: #3146b6;
+    }
+    .place-choice-btn {
+      margin-right: 8px;
+      margin-bottom: 8px;
+      padding: 8px 13px;
+      border-radius: 6px;
+      border: none;
+      background: #ebefff;
+      color: #183ba8;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .place-choice-btn:hover,
+    .place-choice-btn.selected {
+      background: #4169e1;
+      color: #fff;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      padding: 14px 0 16px 0;
+      border-top: 1px solid #e2e4ed;
+      background: #fff;
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+    }
+    .input-row input {
+      font-size: 1.08em;
+      padding: 9px 12px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      flex: 1;
+      background: #f8faff;
+      font-family: inherit;
+    }
+    .input-row button {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 9px 22px;
+      cursor: pointer;
+      font-size: 1.08em;
+      font-family: inherit;
+    }
+    .input-row button:disabled,
+    .input-row input:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    /* --- Added container for autocomplete --- */
+    .autocomplete-row {
+      background: #f8faff;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      padding: 7px;
+      margin-bottom: 10px;
+    }
+    .itinerary {
+      position: fixed;
+      right: 25px;
+      bottom: 25px;
+      background: #fff;
+      border: 1px solid #e2e4ed;
+      border-radius: 7px;
+      width: 300px;
+      max-height: 450px;
+      overflow-y: auto;
+      box-shadow: 0 2px 12px #0002;
+      padding: 15px 14px 14px 16px;
+      z-index: 5;
+      font-family: inherit;
+    }
+    .itinerary h4 {
+      margin: 0 0 10px 0;
+      color: #4169e1;
+    }
+    .itinerary ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .itinerary li {
+      margin: 0 0 10px 0;
+      background: #fafdff;
+      border-radius: 6px;
+      padding: 7px 7px 6px 7px;
+      border: 1px solid #e2e4ed;
+      box-shadow: 0 1px 4px #4169e115;
+      font-size: 1em;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .itinerary-header {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .itinerary-link {
+      color: #4169e1;
+      text-decoration: none;
+      font-size: 0.97em;
+      margin-left: 4px;
+    }
+    .itinerary-btns {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 3px;
+    }
+    .itinerary input[type="text"], .itinerary textarea {
+      font-size: 0.97em;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid #bbb;
+      background: #f8faff;
+    }
+    .itinerary textarea {
+      resize: vertical;
+      min-height: 22px;
+      max-height: 50px;
+      width: 100%;
+    }
+    .remove {
+      margin-left: auto;
+      background: #ff6464;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 7px;
+      cursor: pointer;
+    }
+    .export-btn {
+      background: #4169e1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 20px;
+      cursor: pointer;
+      font-size: 1em;
+      margin: 10px 0 0 0;
+      width: 100%;
+      transition: background 0.2s;
+      font-family: inherit;
+    }
+    .export-btn:hover { background: #3146b6; }
+    @media (max-width: 900px) {
+      .container { max-width: 99vw; }
+      .itinerary { right: 1vw; width: 94vw; }
+    }
   </style>
 </head>
 <body>
