@@ -111,21 +111,19 @@ module.exports = async (req, res) => {
 
   // Improved Groq prompt
   const system = `
-You are a Baguio City travel assistant. You are given a list of real places grouped by area, user interests, and times. Build an efficient step-by-step itinerary between ${startTime} and ${endTime}, starting at "${startLocInfo.address}" and ending at "${endLocInfo.address}". 
+You are a Baguio City travel assistant. You are given a list of real places grouped by area, user interests, and times. Build an efficient step-by-step itinerary between ${startTime} and ${endTime}. 
 - Only use the places in the provided list.
 - For each stop, assign a recommended time slot (e.g. 9:00-10:00am).
 - Group activities at the same area together before moving to a new area.
 - Minimize travel and avoid backtracking.
-- If the user wants to jog at Burnham Park, do other Burnham Park activities sequentially.
 - Format the answer as a JSON array with keys: time, name, description, address, google_maps_url.
+- Make Sure To Address The Users Needs.
 `;
 
   const userPrompt = `
 User wants: ${prompt}
 Start time: ${startTime}
 End time: ${endTime}
-Start location: ${startLocInfo.address}
-End location: ${endLocInfo.address}
 
 PLACES (grouped by area):
 ${placesForPrompt}
