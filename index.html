@@ -311,37 +311,49 @@
     </div>
 
     <!-- Automatic Mode UI -->
-    <div id="autoModeForm" style="display:block;">
-      <form id="automaticItineraryForm">
-        <label>
-          What would you like to do on your trip?<br>
-          <textarea name="prompt" required rows="2" style="width:100%;"></textarea>
-        </label>
-        <br>
-        <label>
-          Start Time:<br>
-          <input type="time" name="startTime" required>
-        </label>
-        <br>
-        <label>
-          End Time:<br>
-          <input type="time" name="endTime" required>
-        </label>
-        <br>
-        <label>
-          Start Location:<br>
-          <gmp-place-autocomplete id="startAutocomplete" style="width:100%;" placeholder="Start Location"></gmp-place-autocomplete>
-        </label>
-        <br>
-        <label>
-          End Location:<br>
-          <gmp-place-autocomplete id="endAutocomplete" style="width:100%;" placeholder="End Location"></gmp-place-autocomplete>
-        </label>
-        <br>
-        <button type="submit" class="card-btn">Generate Itinerary</button>
-      </form>
-      <div id="itineraryResults"></div>
+   <form id="automaticItineraryForm">
+  <label>
+    What would you like to do on your trip?<br>
+    <textarea name="prompt" required rows="2" style="width:100%;"></textarea>
+  </label>
+  <br>
+  <label>
+    Start Time:<br>
+    <input type="time" name="startTime" required>
+  </label>
+  <br>
+  <label>
+    End Time:<br>
+    <input type="time" name="endTime" required>
+  </label>
+  <br>
+  <label>Start Location:<br>
+    <div class="autocomplete-row">
+      <gmp-place-autocomplete
+        id="startAutocomplete"
+        style="width:100%;"
+        placeholder="Start Location"
+        locationBias="circle:20000@16.4023,120.5960"
+      ></gmp-place-autocomplete>
     </div>
+    <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
+  </label>
+  <br>
+  <label>End Location:<br>
+    <div class="autocomplete-row">
+      <gmp-place-autocomplete
+        id="endAutocomplete"
+        style="width:100%;"
+        placeholder="End Location"
+        locationBias="circle:20000@16.4023,120.5960"
+      ></gmp-place-autocomplete>
+    </div>
+    <small style="color: #b00;">Type and SELECT a place from the dropdown (Baguio only)</small>
+  </label>
+  <br>
+  <button type="submit" class="card-btn" id="generateBtn" disabled>Generate Itinerary</button>
+</form>
+<div id="itineraryResults"></div>
 
     <!-- Manual Mode UI -->
     <div id="manualModeArea" style="display:none;">
