@@ -8,8 +8,26 @@ let lastMode = "idle"; // "idle" | "awaiting_action" | "awaiting_place_choice"
 let lastDetailPlaceIdx = null;
 let autoModeItinerary = []; // stores results from automatic mode
 
+// --- PlaceAutocompleteElement state ---
+let startPlace = '';
+let endPlace = '';
+
 // --- Mode Switching ---
 window.addEventListener('DOMContentLoaded', () => {
+  // Setup PlaceAutocompleteElement event listeners
+  const startAutocomplete = document.getElementById('startAutocomplete');
+  const endAutocomplete = document.getElementById('endAutocomplete');
+  if (startAutocomplete) {
+    startAutocomplete.addEventListener('gmp-place-change', function(e) {
+      startPlace = e.detail.place.formatted_address || e.detail.place.name || '';
+    });
+  }
+  if (endAutocomplete) {
+    endAutocomplete.addEventListener('gmp-place-change', function(e) {
+      endPlace = e.detail.place.formatted_address || e.detail.place.name || '';
+    });
+  }
+
   document.getElementById('autoModeBtn').onclick = function() {
     document.getElementById('autoModeForm').style.display = 'block';
     document.getElementById('manualModeArea').style.display = 'none';
@@ -338,8 +356,12 @@ document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   const prompt = form.prompt.value;
   const startTime = form.startTime.value;
   const endTime = form.endTime.value;
-  const startLocation = form.startLocation.value;
-  const endLocation = form.endLocation.value;
+
+  // Updated logic: Use <gmp-place-autocomplete> selections
+  if (!startPlace || !endPlace) {
+    document.getElementById('itineraryResults').innerHTML = "<div style='color:red;'>Please select valid start and end locations using the autocomplete boxes.</div>";
+    return;
+  }
 
   document.getElementById('itineraryResults').innerHTML = "<p>Generating your itinerary...</p>";
 
@@ -347,7 +369,7 @@ document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   const res = await fetch('/api/automatic-itinerary', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({prompt, startTime, endTime, startLocation, endLocation})
+    body: JSON.stringify({prompt, startTime, endTime, startLocation: startPlace, endLocation: endPlace})
   });
   const data = await res.json();
 
