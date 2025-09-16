@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // Helper: Geocode start/end locations to check if they're valid and in Baguio
+  // Helper: Geocode start/end locations (no Baguio check)
   async function geocodePlace(placeStr) {
     if (!placeStr) return null;
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(placeStr)}&key=${apiKey}`;
@@ -27,8 +27,6 @@ module.exports = async (req, res) => {
     const d = await r.json();
     const result = d.results?.[0];
     if (!result) return null;
-    // Check if it's in Baguio (contains "Baguio" in the address)
-    if (!result.formatted_address?.toLowerCase().includes('baguio')) return null;
     return {
       place_id: result.place_id,
       address: result.formatted_address,
@@ -37,15 +35,18 @@ module.exports = async (req, res) => {
     };
   }
 
-  const startLocInfo = await geocodePlace(startLocation);
-  const endLocInfo = await geocodePlace(endLocation);
+  // Only geocode if locations provided (optional)
+  let startLocInfo = null, endLocInfo = null;
+  if (startLocation) startLocInfo = await geocodePlace(startLocation);
+  if (endLocation) endLocInfo = await geocodePlace(endLocation);
 
-  if (!startLocInfo || !endLocInfo) {
-    res.status(400).json({ error: 'Start or end location is invalid or not in Baguio.' });
-    return;
-  }
+  // If you want to require valid geocoding, uncomment below
+  // if ((startLocation && !startLocInfo) || (endLocation && !endLocInfo)) {
+  //   res.status(400).json({ error: 'Start or end location is invalid.' });
+  //   return;
+  // }
 
-  // Build Places API query for things to do near start location, limited to Baguio area
+  // Build Places API query for things to do near Baguio
   const placesQuery = `${prompt} in Baguio City`;
   const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placesQuery)}&location=${BAGUIO_LAT},${BAGUIO_LNG}&radius=${SEARCH_RADIUS_METERS}&key=${apiKey}`;
   const resp = await fetch(placesUrl);
@@ -182,4 +183,4 @@ ${placesForPrompt}
   }
 
   res.status(200).json({ itinerary });
-};
+}
