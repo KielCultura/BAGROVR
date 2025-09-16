@@ -8,23 +8,33 @@ let lastMode = "idle"; // "idle" | "awaiting_action" | "awaiting_place_choice"
 let lastDetailPlaceIdx = null;
 let autoModeItinerary = []; // stores results from automatic mode
 
-// --- PlaceAutocompleteElement state ---
+// --- PlaceAutocompleteElement state (ADDED) ---
 let startPlace = '';
 let endPlace = '';
 
+// --- Enable/Disable submit button based on selection (ADDED) ---
+function updateGenerateBtnState() {
+  const btn = document.getElementById('generateBtn');
+  if (btn) {
+    btn.disabled = !(startPlace && endPlace);
+  }
+}
+
 // --- Mode Switching ---
 window.addEventListener('DOMContentLoaded', () => {
-  // Setup PlaceAutocompleteElement event listeners
+  // --- Setup autocomplete listeners (ADDED) ---
   const startAutocomplete = document.getElementById('startAutocomplete');
   const endAutocomplete = document.getElementById('endAutocomplete');
   if (startAutocomplete) {
     startAutocomplete.addEventListener('gmp-place-change', function(e) {
       startPlace = e.detail.place.formatted_address || e.detail.place.name || '';
+      updateGenerateBtnState();
     });
   }
   if (endAutocomplete) {
     endAutocomplete.addEventListener('gmp-place-change', function(e) {
       endPlace = e.detail.place.formatted_address || e.detail.place.name || '';
+      updateGenerateBtnState();
     });
   }
 
@@ -122,7 +132,7 @@ function renderItinerary() {
         <div><b>Time Spent:</b> <input type="text" placeholder="e.g. 1 hr" value="${escapeHTML(place.timeSpent||'')}" 
           onchange="updateItineraryTime(${idx}, this.value)" style="width:75px;"/></div>
         <div><b>Notes:</b> <textarea placeholder="Add notes..." onchange="updateItineraryNotes(${idx}, this.value)">${escapeHTML(place.userNotes||'')}</textarea></div>
-        <a class="itinerary-link" href="${escapeHTML(place.google_maps_url||'#')}" target="_blank">Google Maps</a>
+        <a class="itinerary-link" href="${escapeHTML(place.google_maps_url||'#")}" target="_blank">Google Maps</a>
       </div>
     `;
     itineraryEl.appendChild(li);
@@ -349,7 +359,7 @@ function exportItineraryAsPDF() {
   doc.save("bagrovr-itinerary.pdf");
 }
 
-// --- Automatic Mode Form Submission ---
+// --- Automatic Mode Form Submission (MODIFIED) ---
 document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   e.preventDefault();
   const form = e.target;
@@ -357,9 +367,11 @@ document.getElementById('automaticItineraryForm').onsubmit = async function(e) {
   const startTime = form.startTime.value;
   const endTime = form.endTime.value;
 
-  // Updated logic: Use <gmp-place-autocomplete> selections
+  // --- Use <gmp-place-autocomplete> selections (ADDED) ---
   if (!startPlace || !endPlace) {
-    document.getElementById('itineraryResults').innerHTML = "<div style='color:red;'>Please select valid start and end locations using the autocomplete boxes.</div>";
+    document.getElementById('itineraryResults').innerHTML =
+      "<div style='color:red;'>Please select valid start and end locations using the autocomplete boxes.</div>";
+    updateGenerateBtnState();
     return;
   }
 
