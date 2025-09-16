@@ -1,5 +1,9 @@
 const fetch = require('node-fetch');
 
+const BAGUIO_LAT = 16.4023;
+const BAGUIO_LNG = 120.5960;
+const SEARCH_RADIUS_METERS = 6000; // Covers most of Baguio
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -15,17 +19,51 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // 1. Get candidate places from Places Text Search
-  const query = `${prompt} near ${startLocation}`;
-  const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=&key=${apiKey}`;
+  // Helper: Geocode start/end locations to check if they're valid and in Baguio
+  async function geocodePlace(placeStr) {
+    if (!placeStr) return null;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(placeStr)}&key=${apiKey}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const result = d.results?.[0];
+    if (!result) return null;
+    // Check if it's in Baguio (contains "Baguio" in the address)
+    if (!result.formatted_address?.toLowerCase().includes('baguio')) return null;
+    return {
+      place_id: result.place_id,
+      address: result.formatted_address,
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng
+    };
+  }
+
+  const startLocInfo = await geocodePlace(startLocation);
+  const endLocInfo = await geocodePlace(endLocation);
+
+  if (!startLocInfo || !endLocInfo) {
+    res.status(400).json({ error: 'Start or end location is invalid or not in Baguio.' });
+    return;
+  }
+
+  // Build Places API query for things to do near start location, limited to Baguio area
+  const placesQuery = `${prompt} in Baguio City`;
+  const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placesQuery)}&location=${BAGUIO_LAT},${BAGUIO_LNG}&radius=${SEARCH_RADIUS_METERS}&key=${apiKey}`;
   const resp = await fetch(placesUrl);
   const data = await resp.json();
-  const places = (data.results || []).slice(0, 8); // Limit to 8 top places
+  let places = (data.results || []).filter(p =>
+    (p.formatted_address || '').toLowerCase().includes('baguio')
+  ).slice(0, 8); // Limit to 8 top places
 
-  // 2. Fetch detailed info for each place
+  // If no places found, show error
+  if (!places.length) {
+    res.status(404).json({ error: 'No places found in Baguio matching your interests.' });
+    return;
+  }
+
+  // Get detailed info for each place (address, rating, URL, etc)
   const detailedPlaces = await Promise.all(
     places.map(async place => {
-      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,types,geometry,photos,url,reviews&key=${apiKey}`;
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,types,geometry,url,reviews&key=${apiKey}`;
       const detailsResp = await fetch(detailsUrl);
       const detailsData = await detailsResp.json();
       const result = detailsData.result || {};
@@ -37,34 +75,63 @@ module.exports = async (req, res) => {
       return {
         name: result.name,
         address: result.formatted_address,
+        lat: result.geometry?.location?.lat,
+        lng: result.geometry?.location?.lng,
         rating: result.rating,
         user_ratings_total: result.user_ratings_total,
         google_maps_url: result.url,
-        review: positiveReview
+        review: positiveReview,
+        types: result.types || []
       };
     })
   );
 
-  // 3. Create a summary string of places for the LLM
-  const placesForPrompt = detailedPlaces.map((p, i) =>
-    `${i + 1}. ${p.name} (${p.address}) - Rating: ${p.rating || "N/A"} (${p.user_ratings_total || 0} reviews)`
-  ).join('\n');
+  // Group places by address or region (for efficiency)
+  function groupPlacesByArea(places) {
+    const groups = {};
+    places.forEach(p => {
+      // Group by first line of address (e.g. "Burnham Park, Baguio")
+      const key = p.address?.split(',')[0] || p.address;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    return groups;
+  }
 
-  // 4. Compose prompt for Groq
-  const system = `You are a Baguio City travel assistant. You are given a list of real places, user interests, and times. Build a step-by-step itinerary between ${startTime} and ${endTime}, starting at "${startLocation}" and ending at "${endLocation}". Only use the places listed below. For each stop, pick a place, assign a time, and write a short, friendly description. NEVER invent a new place—use only those provided. Format the answer as a JSON array with keys: time, name, description, address, google_maps_url.`;
+  const groupedPlaces = groupPlacesByArea(detailedPlaces);
+
+  // Prepare places summary for the LLM, grouped by area
+  let placesForPrompt = '';
+  Object.entries(groupedPlaces).forEach(([area, plist], idx) => {
+    placesForPrompt += `Area ${idx + 1}: ${area}\n`;
+    plist.forEach((p, i) => {
+      placesForPrompt += `  - ${p.name} (${p.address}) | Rating: ${p.rating || "N/A"} (${p.user_ratings_total || 0} reviews)\n`;
+    });
+  });
+
+  // Improved Groq prompt
+  const system = `
+You are a Baguio City travel assistant. You are given a list of real places grouped by area, user interests, and times. Build an efficient step-by-step itinerary between ${startTime} and ${endTime}, starting at "${startLocInfo.address}" and ending at "${endLocInfo.address}". 
+- Only use the places in the provided list.
+- For each stop, assign a recommended time slot (e.g. 9:00-10:00am).
+- Group activities at the same area together before moving to a new area.
+- Minimize travel and avoid backtracking.
+- If the user wants to jog at Burnham Park, do other Burnham Park activities sequentially.
+- Format the answer as a JSON array with keys: time, name, description, address, google_maps_url.
+`;
 
   const userPrompt = `
 User wants: ${prompt}
 Start time: ${startTime}
 End time: ${endTime}
-Start location: ${startLocation}
-End location: ${endLocation}
+Start location: ${startLocInfo.address}
+End location: ${endLocInfo.address}
 
-PLACES:
+PLACES (grouped by area):
 ${placesForPrompt}
   `;
 
-  // 5. Call Groq
+  // Call Groq
   const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -78,7 +145,7 @@ ${placesForPrompt}
         { role: "user", content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1024,
     }),
   });
 
@@ -86,7 +153,6 @@ ${placesForPrompt}
   let itinerary = [];
   try {
     const content = groqData.choices?.[0]?.message?.content || "";
-    // Try direct JSON
     itinerary = JSON.parse(content);
   } catch (e) {
     // Try to extract JSON from markdown block
@@ -97,15 +163,24 @@ ${placesForPrompt}
     }
   }
 
-  // Fallback: If LLM fails, use places as is
+  // Fallback: If LLM fails, just group places and assign times sequentially
   if (!Array.isArray(itinerary) || itinerary.length === 0) {
-    itinerary = detailedPlaces.map((p, i) => ({
-      time: "",
-      name: p.name,
-      description: p.review || "",
-      address: p.address,
-      google_maps_url: p.google_maps_url
-    }));
+    let currentTime = startTime || "09:00";
+    itinerary = [];
+    Object.entries(groupedPlaces).forEach(([area, plist]) => {
+      plist.forEach(p => {
+        itinerary.push({
+          time: currentTime,
+          name: p.name,
+          description: p.review || "",
+          address: p.address,
+          google_maps_url: p.google_maps_url
+        });
+        // Increment time by 1 hour for next stop (roughly)
+        let h = parseInt(currentTime.split(':')[0], 10) + 1;
+        currentTime = (h < 10 ? "0" : "") + h + ":00";
+      });
+    });
   }
 
   res.status(200).json({ itinerary });
