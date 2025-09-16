@@ -39,14 +39,14 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('autoModeBtn').onclick = function() {
-    document.getElementById('autoModeForm').style.display = 'block';
+    document.getElementById('automaticItineraryForm').style.display = 'block';
     document.getElementById('manualModeArea').style.display = 'none';
     this.classList.add('active');
     document.getElementById('manualModeBtn').classList.remove('active');
     document.getElementById('itineraryResults').style.display = 'block';
   };
   document.getElementById('manualModeBtn').onclick = function() {
-    document.getElementById('autoModeForm').style.display = 'none';
+    document.getElementById('automaticItineraryForm').style.display = 'none';
     document.getElementById('manualModeArea').style.display = 'block';
     this.classList.add('active');
     document.getElementById('autoModeBtn').classList.remove('active');
@@ -87,7 +87,7 @@ function addResultsHistoryBlock(query, places, offset) {
   const block = document.createElement('div');
   block.className = 'history-block';
   const startNum = offset + 1;
-  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span> <span style="color:#444;">(${startNum}–${startNum + places.length - 1})</span></div>`;
+  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span> <span style="color:#444;">(${startNum}\u2013${startNum + places.length - 1})</span></div>`;
   places.forEach((place, idx) => {
     const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
     const card = document.createElement('div');
@@ -126,7 +126,7 @@ function renderItinerary() {
     li.innerHTML = `
       <div class="itinerary-header">
         <span>${idx + 1}. ${escapeHTML(place.name)}</span>
-        <button class="remove" onclick="removeFromItinerary(${idx})" title="Remove from itinerary">✕</button>
+        <button class="remove" onclick="removeFromItinerary(${idx})" title="Remove from itinerary">&#10005;</button>
       </div>
       <div style="font-size:0.97em;">
         <div><b>Time Spent:</b> <input type="text" placeholder="e.g. 1 hr" value="${escapeHTML(place.timeSpent||'')}" 
@@ -292,7 +292,7 @@ async function showPlaceDetails(idx) {
 function makeTourismAdSummary(detail) {
   // Some fallback values
   const name = escapeHTML(detail.name || "this place");
-  const rating = typeof detail.rating === 'number' ? `${detail.rating}★` : "well-rated";
+  const rating = typeof detail.rating === 'number' ? `${detail.rating}\u2605` : "well-rated";
   const address = escapeHTML(detail.address || "Baguio City");
   const closing = detail.opening_hours && detail.opening_hours.weekday_text
     ? "Open: " + detail.opening_hours.weekday_text.join(", ")
