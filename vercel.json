@@ -1,0 +1,6 @@
+{
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static-build", "config": { "distDir": "public" } }
+  ],
+  "buildCommand": "GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY node inject-key.js"
+}
