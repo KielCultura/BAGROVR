@@ -122,7 +122,7 @@ You are a Baguio City travel assistant. You are given a list of real places grou
 - If they state a specific location is to be the first destination or last put them at the last of the list or first depending on what they gave.
 - If given a timeline (Example: Mall --> Restaurants --> Activity) follow it.
 - Consider and opening times according to the Starting and endign times they have stated.
-- If they gave out a specifc place but it is closed at the timeframe they have provided, disregard it.
+- If they gave out a specifc place but it is closed at the timeframe they have provided, disregard it and replace it with another similar destination and then add on the description key on the JSON file that the destination the user gave is closed at the timeframe and is replaced with another available destination.
 `;
 
   const userPrompt = `
