@@ -307,8 +307,8 @@ body {
 }
 .export-btn {
   position: fixed;
-  right: 25px;
-  bottom: 25px;
+  right: 10px;
+  bottom: 10px;
   background: #ffce10;
   color: #333;
   border: none;
@@ -387,8 +387,8 @@ a, .card-link, .itinerary-link {
 }
 .tutorial-btn {
   position: fixed;
-  left: 25px;
-  bottom: 85px;
+  right: 10px;
+  bottom: 68px; /* 44px button + 14px gap above export-btn */
   background: #ffce10;
   color: #333;
   border: none;
@@ -400,7 +400,7 @@ a, .card-link, .itinerary-link {
   font-size: 1.3em;
   font-weight: bold;
   box-shadow: 0 2px 8px #4169e119;
-  z-index: 100;
+  z-index: 101;
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
   display: flex;
@@ -479,6 +479,7 @@ a, .card-link, .itinerary-link {
     padding: 10px 5px 9px 7px;
   }
   .export-btn {
+    position: fixed !important;
     right: 10px !important;
     bottom: 10px !important;
     font-size: 0.98em !important;
@@ -487,11 +488,11 @@ a, .card-link, .itinerary-link {
     width: auto !important;
     min-width: 100px;
     z-index: 100;
-    position: fixed !important;
   }
   .tutorial-btn {
-    left: 10px !important;
-    bottom: 58px !important;
+    position: fixed !important;
+    right: 10px !important;
+    bottom: 68px !important;
     font-size: 1.3em !important;
     width: 44px !important;
     height: 44px !important;
@@ -503,7 +504,7 @@ a, .card-link, .itinerary-link {
     align-items: center;
     text-align: center;
     display: flex !important;
-    z-index: 100;
+    z-index: 101;
   }
 }
 
