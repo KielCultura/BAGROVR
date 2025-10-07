@@ -99,6 +99,12 @@
     cursor: pointer;
     font-family: 'Comfortaa', Arial, sans-serif;
     transition: background 0.2s, color 0.2s;
+    font-size: 0.98em;      /* slightly smaller */
+    padding: 6px 12px;      /* less vertical/horizontal padding */
+    margin: 2px 4px;        /* small margin to avoid overlap */
+    min-width: 0;           /* allow to shrink */
+    box-sizing: border-box;
+
   }
   .card-btn:disabled,
   .action-btn:disabled,
@@ -304,9 +310,9 @@
     color: #333;
     border: none;
     border-radius: 6px;	
-    padding: 7px 20px;
+    padding: 8px 18px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 1.03em;
     margin: 10px 0 0 0;
     width: 100%;
     transition: background 0.2s;
@@ -374,6 +380,44 @@
   font-family: Georgia, serif;
   font-weight: bold;
 }
+       .tutorial-btn {
+  position: fixed;
+  left: 25px;
+  bottom: 25px;
+  background: #ffce10;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-family: 'Comfortaa', Arial, sans-serif;
+  font-size: 1.03em;
+  font-weight: bold;
+  box-shadow: 0 2px 8px #4169e119;
+  z-index: 99;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tutorial-btn:hover {
+  background: #e0b808;
+  color: #222;
+}
+@media (max-width: 700px) {
+  .tutorial-btn {
+    left: 8px;
+    bottom: 8px;
+    font-size: 1em;
+    padding: 7px 13px;
+  }
+  .export-btn {
+    right: 8px !important;
+    bottom: 8px !important;
+    font-size: 1em;
+    padding: 7px 13px;
+  }
+}
 </style>
 </head>
 <body>
@@ -425,5 +469,8 @@
   </div>
   <script src="script.js"></script>
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY&libraries=places"></script>
+  <a class="tutorial-btn" href="https://sites.google.com/view/bagrovrph/tutorial?authuser=0" target="_blank" rel="noopener">
+  Help
+</a>
 </body>
 </html>
