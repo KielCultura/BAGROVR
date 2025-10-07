@@ -119,9 +119,10 @@ You are a Baguio City travel assistant. You are given a list of real places grou
 - Minimize travel and avoid backtracking.
 - Format the answer as a JSON array with keys: time, name, description, address, google_maps_url.
 - Make Sure To Address The Users Needs.
-- If they state a specific location is to be the first destination or last put them at the last of the list
+- If they state a specific location is to be the first destination or last put them at the last of the list or first depending on what they gave.
 - If given a timeline (Example: Mall --> Restaurants --> Activity) follow it.
 - Consider and opening times according to the Starting and endign times they have stated.
+- If they gave out a specifc place but it is closed at the timeframe they have provided, disregard it.
 `;
 
   const userPrompt = `
