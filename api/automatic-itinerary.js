@@ -61,10 +61,10 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // Get detailed info for each place (address, rating, URL, etc)
+  // Get detailed info for each place (address, rating, URL, etc) INCLUDING opening_hours
   const detailedPlaces = await Promise.all(
     places.map(async place => {
-      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,types,geometry,url,reviews&key=${apiKey}`;
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,rating,user_ratings_total,types,geometry,url,reviews,opening_hours&key=${apiKey}`;
       const detailsResp = await fetch(detailsUrl);
       const detailsData = await detailsResp.json();
       const result = detailsData.result || {};
@@ -82,7 +82,8 @@ module.exports = async (req, res) => {
         user_ratings_total: result.user_ratings_total,
         google_maps_url: result.url,
         review: positiveReview,
-        types: result.types || []
+        types: result.types || [],
+        opening_hours: result.opening_hours || null // <--- Add opening_hours here
       };
     })
   );
@@ -101,28 +102,35 @@ module.exports = async (req, res) => {
 
   const groupedPlaces = groupPlacesByArea(detailedPlaces);
 
-  // Prepare places summary for the LLM, grouped by area
+  // Prepare places summary for the LLM, grouped by area, including opening hours
   let placesForPrompt = '';
   Object.entries(groupedPlaces).forEach(([area, plist], idx) => {
     placesForPrompt += `Area ${idx + 1}: ${area}\n`;
     plist.forEach((p, i) => {
-      placesForPrompt += `  - ${p.name} (${p.address}) | Rating: ${p.rating || "N/A"} (${p.user_ratings_total || 0} reviews)\n`;
+      let hoursStr = '';
+      if (p.opening_hours?.weekday_text) {
+        hoursStr = ` | Hours: ${p.opening_hours.weekday_text.join('; ')}`;
+      }
+      placesForPrompt += `  - ${p.name} (${p.address}) | Rating: ${p.rating || "N/A"} (${p.user_ratings_total || 0} reviews)${hoursStr}\n`;
     });
   });
 
   // Improved Groq prompt
   const system = `
-You are a Baguio City travel assistant. You are given a list of real places grouped by area, user interests, and times. Build an efficient step-by-step itinerary between ${startTime} and ${endTime}. 
+You are a Baguio City travel assistant. You are given a list of real places grouped by area, user interests, and their opening hours. Build an efficient step-by-step itinerary between ${startTime} and ${endTime}.
 - Only use the places in the provided list.
 - For each stop, assign a recommended time slot (e.g. 9:00-10:00am).
 - Group activities at the same area together before moving to a new area.
 - Minimize travel and avoid backtracking.
+- STRICTLY consider the opening and closing times for each place (provided as "Hours" for each).
+- Do NOT assign a time when a place is closed.
+- If a place cannot be visited because of its opening hours, skip it and mention it in the description.
+- If a specific place is requested but is closed at the timeframe, replace it with a similar destination and note this in the description.
 - Format the answer as a JSON array with keys: time, name, description, address, google_maps_url.
 - Make Sure To Address The Users Needs.
 - If they state a specific location is to be the first destination or last put them at the last of the list or first depending on what they gave.
 - If given a timeline (Example: Mall --> Restaurants --> Activity) follow it.
-- Consider and opening times according to the Starting and endign times they have stated.
-- If they gave out a specifc place but it is closed at the timeframe they have provided, disregard it and replace it with another similar destination and then add on the description key on the JSON file that the destination the user gave is closed at the timeframe and is replaced with another available destination.
+- Consider opening times according to the Starting and ending times they have stated.
 `;
 
   const userPrompt = `
