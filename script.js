@@ -87,7 +87,12 @@ function addResultsHistoryBlock(query, places, offset) {
   const block = document.createElement('div');
   block.className = 'history-block';
   const startNum = offset + 1;
-  block.innerHTML = `<div class="history-query">Results for: <span style="color:#3146b6;">${escapeHTML(query)}</span> <span style="color:#444;">(${startNum}\u2013${startNum + places.length - 1})</span></div>`;
+  block.innerHTML = `<div class="history-query">
+  Results for: <span style="color:#ffce10; font-family:Georgia,serif; font-weight:bold;">
+    ${escapeHTML(query)}
+  </span>
+  <span style="color:#444;">(${startNum}\u2013${startNum + places.length - 1})</span>
+</div>`;
   places.forEach((place, idx) => {
     const inItinerary = itinerary.some(x => x.name === place.name && x.address === place.address);
     const card = document.createElement('div');
