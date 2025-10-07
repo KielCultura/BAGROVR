@@ -121,6 +121,7 @@ You are a Baguio City travel assistant. You are given a list of real places grou
 - Make Sure To Address The Users Needs.
 - If they state a specific location is to be the first destination or last put them at the last of the list
 - If given a timeline (Example: Mall --> Restaurants --> Activity) follow it.
+- Consider and opening times according to the Starting and endign times they have stated.
 `;
 
   const userPrompt = `
