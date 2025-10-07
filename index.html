@@ -374,6 +374,21 @@
   font-family: Georgia, serif;
   font-weight: bold;
 }
+
+       @media (max-width: 700px) {
+  .itinerary {
+    position: static !important;  /* No fixed or absolute positioning */
+    width: 98vw !important;        /* Full width */
+    max-width: 99vw;
+    margin: 16px auto !important;  /* Center and add margin */
+    box-shadow: 0 2px 8px #0001;   /* Softer shadow */
+    left: unset !important;
+    right: unset !important;
+    bottom: unset !important;
+    top: unset !important;
+    z-index: 1;
+  }
+}
 </style>
 </head>
 <body>
