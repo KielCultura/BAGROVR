@@ -184,8 +184,8 @@ Return ONLY a JSON array. Example item:
     } catch (err) {
       // If the LLM call itself errors out, return a simple fallback itinerary so the client still gets something.
       const fallbackItinerary = [
-        { time: `${startTime || "09:00"}-${addMinutes(startTime || "09:00", 60)}`, name: "Prep & materials", description: "Prepare materials and workspace.", duration: 60, materials: ["basic supplies"], optional_shopping: "", address: "", google_maps_url: "", source: "generated" },
-        { time: `${addMinutes(startTime || "09:00", 60)}-${addMinutes(startTime || "09:00", 240)}`, name: "Main activity", description: "Hands-on project session.", duration: 180, materials: ["project-specific materials"], optional_shopping: "", address: "", google_maps_url: "", source: "generated" }
+        { time: `${startTime || "09:00"}-${addMinutes(startTime || "09:00", 60)}`, name: "Prep & materials", description: "Prepare materials and workspace.", duration: 60, materials: ["basic supp[...]" ],
+        { time: `${addMinutes(startTime || "09:00", 60)}-${addMinutes(startTime || "09:00", 240)}`, name: "Main activity", description: "Hands-on project session.", duration: 180, materials: ["pr[...]" ]
       ];
       res.status(200).json({ itinerary: fallbackItinerary });
       return;
