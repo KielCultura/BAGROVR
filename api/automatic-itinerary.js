@@ -43,7 +43,10 @@ module.exports = async (req, res) => {
   // --- Tiny intent classifier (server-side) ---
   function classifyIntent(query) {
     if (!query || !query.trim()) return { intent: "ambiguous", score: 0 };
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
+
+    // Treat an exact single token "diy" as ambiguous by default (recommended UX).
+    if (q === "diy") return { intent: "ambiguous", score: 0 };
 
     // Strong explicit tokens
     if (q.startsWith("plan:") || q.startsWith("itinerary:") || q.includes("itinerary") || q.match(/\bplan\b|\bcreate\b|\bmake\b/)) {
@@ -55,13 +58,25 @@ module.exports = async (req, res) => {
 
     // Heuristics
     let score = 0;
-    if (q.trim().split(/\s+/).length === 1) score -= 2; // single-word often lookup
-    if (q.includes("diy")) score -= 1; // DIY is commonly ambiguous between "shops" and "do-it-yourself itinerary"
+    if (q.split(/\s+/).length === 1) score -= 2; // single-word often lookup
+    if (q.includes("diy")) score -= 0; // don't bias heavily; we treated exact "diy" as ambiguous above
 
     const margin = 2;
     if (score >= margin) return { intent: "plan_itinerary", score };
     if (score <= -margin) return { intent: "search", score };
     return { intent: "ambiguous", score };
+  }
+
+  // Helper to add minutes to HH:MM string
+  function addMinutes(timeStr, mins) {
+    const [hhStr, mmStr] = (timeStr || "09:00").split(':');
+    const hh = parseInt(hhStr, 10) || 9;
+    const mm = parseInt(mmStr || "0", 10) || 0;
+    const dt = new Date(0, 0, 0, hh, mm);
+    dt.setMinutes(dt.getMinutes() + mins);
+    const hh2 = String(dt.getHours()).padStart(2, '0');
+    const mm2 = String(dt.getMinutes()).padStart(2, '0');
+    return `${hh2}:${mm2}`;
   }
 
   // If classifier decides the user wants an itinerary (plan-only), bypass Google Places and ask LLM to produce a self-contained plan.
@@ -71,22 +86,24 @@ module.exports = async (req, res) => {
     // Strict LLM prompt: produce a JSON array itinerary (time, name, description, duration, materials, optional_shopping)
     const planSystem = `
 You are an itinerary maker for Baguio City and for DIY projects. Do NOT return a list of shops only.
-Create a self-contained itinerary based on the user's request. Provide a JSON array where each item has keys:
-- time (e.g. "09:00-10:00" or a start time string)
-- name (short title)
-- description (1-2 sentences)
-- duration (minutes)
-- materials (if relevant; string or array)
-- optional_shopping (ONE short sentence if materials are needed; do NOT return shop lists)
-Only output valid JSON (an array). Use the user's Start/End times when possible.
+Create a self-contained itinerary based on the user's request. Provide ONLY valid JSON (a JSON array) where each item has these keys:
+- time (string): formatted as "HH:MM-HH:MM" (use start/end times when possible)
+- name (string): short title
+- description (string): 1-2 sentences
+- duration (integer): minutes
+- materials (array or string): list of required materials or an empty array
+- optional_shopping (string): ONE short sentence if materials need items; do NOT return lists of shops
+- address (string): empty string "" if none
+- google_maps_url (string): empty string "" if none
+Return only JSON; do not include any explanatory text.
 `;
 
     const planUser = `
 User requested: ${prompt}
-Start time: ${startTime}
-End time: ${endTime}
+Start time: ${startTime || ""}
+End time: ${endTime || ""}
 Return ONLY a JSON array. Example item:
-[{ "time": "09:00-10:00", "name": "Title", "description": "...", "duration": 60, "materials": "..." }]
+[{ "time": "09:00-10:00", "name": "Title", "description": "...", "duration": 60, "materials": ["..."], "optional_shopping":"", "address":"", "google_maps_url":"" }]
 `;
 
     try {
@@ -121,23 +138,54 @@ Return ONLY a JSON array. Example item:
         }
       }
 
-      // Fallback simple schedule if LLM failed to return JSON
+      // Fallback: if LLM returned bad shape, produce a sensible default schedule with proper time ranges and required keys
       if (!Array.isArray(itinerary) || itinerary.length === 0) {
-        let current = startTime || "09:00";
-        itinerary = [
-          { time: current, name: "Prep & materials", description: "Prepare materials and workspace.", duration: 60, materials: "Basic supplies (tools, tape, glue)", optional_shopping: "" },
-          { time: "Mid", name: "Main activity", description: "Hands-on project session.", duration: 180, materials: "Project-specific materials", optional_shopping: "" },
-          { time: "End", name: "Finish & cleanup", description: "Finishing touches and cleanup.", duration: 60, materials: "Finishing supplies", optional_shopping: "" }
+        const start = startTime || "09:00";
+        const defaultSteps = [
+          { name: "Prep & materials", duration: 60, description: "Prepare materials and workspace.", materials: ["basic supplies (tape, glue, safety glasses)"] },
+          { name: "Main build session", duration: 180, description: "Hands-on project session.", materials: ["project-specific materials", "tools"] },
+          { name: "Finish & cleanup", duration: 60, description: "Finishing touches and cleanup.", materials: ["sandpaper","varnish"] }
         ];
+
+        let cursor = start;
+        itinerary = defaultSteps.map(s => {
+          const end = addMinutes(cursor, s.duration);
+          const item = {
+            time: `${cursor}-${end}`,
+            name: s.name,
+            description: s.description,
+            duration: s.duration,
+            materials: Array.isArray(s.materials) ? s.materials : [s.materials],
+            optional_shopping: "",
+            address: "",
+            google_maps_url: "",
+            source: "generated"
+          };
+          cursor = end;
+          return item;
+        });
+      } else {
+        // Normalize items to ensure expected keys exist
+        itinerary = itinerary.map(it => ({
+          time: it.time || (startTime || "09:00"),
+          name: it.name || "Activity",
+          description: it.description || "",
+          duration: typeof it.duration === 'number' ? it.duration : (it.duration ? Number(it.duration) || 60 : 60),
+          materials: it.materials || [],
+          optional_shopping: it.optional_shopping || "",
+          address: it.address || "",
+          google_maps_url: it.google_maps_url || "",
+          source: it.source || "generated"
+        }));
       }
 
       res.status(200).json({ itinerary });
       return;
     } catch (err) {
       // If the LLM call itself errors out, return a simple fallback itinerary so the client still gets something.
-      let fallbackItinerary = [
-        { time: startTime || "09:00", name: "Prep & materials", description: "Prepare materials and workspace.", duration: 60, materials: "Basic supplies", optional_shopping: "" },
-        { time: endTime || "12:00", name: "Main activity", description: "Hands-on project session.", duration: 180, materials: "Project-specific materials", optional_shopping: "" }
+      const fallbackItinerary = [
+        { time: `${startTime || "09:00"}-${addMinutes(startTime || "09:00", 60)}`, name: "Prep & materials", description: "Prepare materials and workspace.", duration: 60, materials: ["basic supplies"], optional_shopping: "", address: "", google_maps_url: "", source: "generated" },
+        { time: `${addMinutes(startTime || "09:00", 60)}-${addMinutes(startTime || "09:00", 240)}`, name: "Main activity", description: "Hands-on project session.", duration: 180, materials: ["project-specific materials"], optional_shopping: "", address: "", google_maps_url: "", source: "generated" }
       ];
       res.status(200).json({ itinerary: fallbackItinerary });
       return;
@@ -278,7 +326,7 @@ ${placesForPrompt}
     }
   }
 
-  // Fallback: If LLM fails, just group places and assign times sequentially
+  // Fallback: If LLM fails, just group places and assign times sequentially with consistent keys
   if (!Array.isArray(itinerary) || itinerary.length === 0) {
     let currentTime = startTime || "09:00";
     itinerary = [];
@@ -289,8 +337,9 @@ ${placesForPrompt}
           time: currentTime,
           name: p.name,
           description: p.review || "",
-          address: p.address,
-          google_maps_url: p.google_maps_url
+          address: p.address || "",
+          google_maps_url: p.google_maps_url || "",
+          source: "places"
         });
         // Increment time by 1 hour for next stop (roughly)
         let h = parseInt(currentTime.split(':')[0], 10) + 1;
