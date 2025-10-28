@@ -526,6 +526,50 @@ a, .card-link, .itinerary-link {
     display: inline-block !important;
   }
 }
+    #manualModeArea #searchForm {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 auto;           /* center the form container */
+  max-width: 1000px;       /* keep a sensible maximum on very wide screens */
+  box-sizing: border-box;
+}
+
+/* Make the input field longer while preserving existing look */
+#manualModeArea #searchForm #searchInput,
+#manualModeArea #searchForm input[type="text"] {
+  width: 70% !important;     /* wider on desktop */
+  min-width: 360px;          /* avoid being too narrow on medium screens */
+  max-width: calc(100% - 140px); /* leave room for the button */
+  padding: 9px 12px;
+  box-sizing: border-box;
+}
+
+/* Keep submit button reasonable size and aligned */
+#manualModeArea #searchForm button[type="submit"] {
+  min-width: 110px;
+  padding: 8px 14px;
+  align-self: center;
+}
+
+/* Mobile / small screens: stack vertically and make input nearly full width */
+@media (max-width: 640px) {
+  #manualModeArea #searchForm {
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  #manualModeArea #searchForm #searchInput {
+    width: 96% !important;
+    min-width: 0;
+  }
+  #manualModeArea #searchForm button[type="submit"] {
+    width: 70%;
+    max-width: 320px;
+  }
+}
   </style>
 </head>
 <body>
