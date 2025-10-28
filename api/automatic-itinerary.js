@@ -131,6 +131,7 @@ You are a Baguio City travel assistant. You are given a list of real places grou
 - If they state a specific location is to be the first destination or last put them at the last of the list or first depending on what they gave.
 - If given a timeline (Example: Mall --> Restaurants --> Activity) follow it.
 - Consider opening times according to the Starting and ending times they have stated.
+- If they ask you to just make one, create an itinerary that includes popular destinations, along with food stops and dont forget the previous instructions when doing so.
 `;
 
   const userPrompt = `
