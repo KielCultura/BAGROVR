@@ -7,576 +7,593 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
-  <style>
-    @import url('https://fonts.googleapis.com/css?family=Comfortaa:400,700&display=swap');
-  
-body {
-  font-family: 'Comfortaa', Arial, sans-serif;
-  background: #383f46;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  width: 100vw;
-}
-    p {
-   font-family: 'Comfortaa', Arial, sans-serif;
-    }
-.container {
-  width: 100vw;
-  margin: 0;
-  background: #fff;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  max-width: 100vw;
-}
-.brand {
-  text-align: center;
-  font-weight: 700;
-  font-size: 2.1em;
-  color: #ffce10;
-  margin-bottom: 2px;
-  letter-spacing: 1px;
-  font-family: Georgia, serif;
-  margin-top: 32px;
-}
-.subtitle {
-  text-align: center;
-  color: #ffce10;
-  font-size: 1.1em;
-  margin: 0 0 16px 0;
-  font-family: Georgia, serif;
-}
+ <style>
+  @import url('https://fonts.googleapis.com/css?family=Comfortaa:400,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Boldense:wght@700&display=swap');
 
-/* --- Itinerary section inline --- */
-.itinerary-section {
-  width: 100%;
-  max-width: 700px;
-  margin: 0 auto 20px auto;
-  padding: 0 2vw;
-  background: #fff;
-}
-.itinerary-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 5px;
-}
-.itinerary-header-row h4 {
-  margin: 0;
-  color: #ffce10;
-  font-family: Georgia, serif;
-  font-size: 1.2em;
-}
-.export-btn {
-  background: #ffce10;
-  color: #333;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: 'Comfortaa', Arial, sans-serif;
-  transition: background 0.2s, color 0.2s;
-  font-size: 0.96em;
-  padding: 7px 13px;
-  margin: 0;
-  min-width: 100px;
-  box-sizing: border-box;
-}
-.export-btn:disabled {
-  background: #ccc;
-  color: #888;
-  cursor: not-allowed;
-}
-.export-btn:hover:not(:disabled) {
-  background: #e0b808;
-  color: #333;
-}
-.itinerary-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.itinerary-list li {
-  margin: 0 0 8px 0;
-  background: #fafdff;
-  border-radius: 6px;
-  padding: 5px 5px 5px 5px;
-  border: 1px solid #e2e4ed;
-  box-shadow: 0 1px 4px #4169e115;
-  font-size: 0.98em;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.itinerary-header {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  margin-bottom: 1px;
-}
-.itinerary-link {
-  color: #93c47d !important;
-  text-decoration: none;
-  font-size: 0.97em;
-  margin-left: 4px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.itinerary-btns {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 2px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.itinerary-list input[type="text"], .itinerary-list textarea {
-  font-size: 0.96em;
-  padding: 2px 5px;
-  border-radius: 5px;
-  border: 1px solid #bbb;
-  background: #f8faff;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.itinerary-list textarea {
-  resize: vertical;
-  min-height: 18px;
-  max-height: 40px;
-  width: 100%;
-}
-.remove {
-  margin-left: auto;
-  background: #ffce10;
-  color: #d32f2f;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 7px;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-/* --- Cards and Buttons --- */
-.card {
-  background: #fafdff;
-  border: 1px solid #e2e4ed;
-  border-radius: 8px;
-  padding: 13px 15px 10px 15px;
-  box-shadow: 0 2px 8px #4169e119;
-  margin-bottom: 8px;
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 3px;
-}
-.card-title {
-  font-size: 1.08em;
-  color: #ffce10;
-  font-weight: 700;
-  margin-right: 5px;
-  font-family: Georgia, serif;
-}
-.card-btn,
-.action-btn,
-.place-choice-btn,
-.remove,
-.export-btn,
-.mode-btn {
-  background: #ffce10;
-  color: #333;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: 'Comfortaa', Arial, sans-serif;
-  transition: background 0.2s, color 0.2s;
-  font-size: 0.96em;
-  padding: 5px 10px;
-  margin: 2px 2px;
-  min-width: 0;
-  box-sizing: border-box;
-}
-.card-btn:disabled,
-.action-btn:disabled,
-.place-choice-btn:disabled,
-.remove:disabled,
-.export-btn:disabled,
-.mode-btn:disabled {
-  background: #ccc;
-  color: #888;
-  cursor: not-allowed;
-}
-.card-btn:hover:not(:disabled),
-.action-btn:hover:not(:disabled),
-.export-btn:hover:not(:disabled),
-.mode-btn:hover:not(:disabled),
-.card-btn.selected,
-.action-btn.selected,
-.mode-btn.selected,
-.place-choice-btn:hover,
-.place-choice-btn.selected {
-  background: #e0b808;
-  color: #333;
-}
-.card-rating {
-  font-size: 0.98em;
-  margin-bottom: 2px;
-  color: #373a4a;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.card-address {
-  margin-bottom: 2px;
-  color: #616487;
-  font-size: 0.97em;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.card-desc {
-  font-style: italic;
-  color: #299b2a;
-  font-size: 0.93em;
-  margin-bottom: 2px;
-  background: #eafbe6;
-  border-radius: 6px;
-  padding: 5px 9px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.card-link {
-  color: #93c47d !important;
-  text-decoration: none;
-  font-size: 0.95em;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
-.action-btn {
-  padding: 7px 12px;
-  font-size: 0.98em;
-  margin-bottom: 3px;
-}
-.place-choice-btn {
-  margin-right: 5px;
-  margin-bottom: 5px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: none;
-  background: #ffce10;
-  color: #183ba8;
-  font-size: 0.98em;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-family: 'Comfortaa', inherit;
-}
-
-/* --- Inputs --- */
-.input-row {
-  display: flex;
-  gap: 8px;
-  padding: 14px 0 16px 0;
-  border-top: 1px solid #e2e4ed;
-  background: #fff;
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-}
-.input-row input {
-  font-size: 1.08em;
-  padding: 9px 12px;
-  border-radius: 5px;
-  border: 1px solid #bbb;
-  flex: 1;
-  background: #f8faff;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-.input-row button {
-  background: #ffce10;
-  color: #333;
-  border: none;
-  border-radius: 5px;
-  padding: 8px 18px;
-  cursor: pointer;
-  font-size: 1em;
-  font-family: inherit;
-}
-.input-row button:disabled,
-.input-row input:disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-.autocomplete-row {
-  background: #f8faff;
-  border-radius: 5px;
-  border: 1px solid #bbb;
-  padding: 7px;
-  margin-bottom: 10px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-}
-
-/* --- Search Form --- */
-#searchForm {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-#searchInput {
-  font-family: 'Comfortaa', Arial, sans-serif;
-  font-size: 1.08em;
-  padding: 8px 10px;
-  border-radius: 5px;
-  border: 1px solid #bbb;
-  background: #f8faff;
-  flex: 1 1 180px;
-  min-width: 0;
-  max-width: 250px;
-}
-#searchForm button[type="submit"] {
-  background: #ffce10;
-  color: #333;
-  border: none;
-  border-radius: 5px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 1em;
-  font-family: 'Comfortaa', Arial, sans-serif;
-  transition: background 0.2s, color 0.2s;
-  width: auto;
-  min-width: 90px;
-  max-width: 200px;
-  display: block;
-  margin: 0 auto;
-}
-#searchForm button[type="submit"]:hover:not(:disabled) {
-  background: #e0b808;
-}
-a, .card-link, .itinerary-link {
-  color: #93c47d !important;
-}
-#actionArea b,
-#actionArea strong,
-#actionArea .results-query {
-  color: #ffce10;
-  font-family: Georgia, serif;
-  font-weight: bold;
-}
-
-/* --- Help Button --- */
-.tutorial-btn {
-  position: fixed;
-  right: 10px;
-  bottom: 68px;
-  background: #ffce10;
-  color: #333;
-  border: none;
-  border-radius: 50%;
-  padding: 0;
-  width: 44px;
-  height: 44px;
-  font-family: 'Comfortaa', Arial, sans-serif;
-  font-size: 1.3em;
-  font-weight: bold;
-  box-shadow: 0 2px 8px #4169e119;
-  z-index: 101;
-  text-decoration: none;
-  transition: background 0.2s, color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-}
-.tutorial-btn:hover {
-  background: #e0b808;
-  color: #222;
-}
-
-/* --- MOBILE FRIENDLY --- */
-@media (max-width: 900px) {
-  .container { max-width: 99vw; }
-  .itinerary-section { max-width: 99vw; }
-}
-@media (max-width: 700px) {
+  body {
+    font-family: 'Comfortaa', Arial, sans-serif;
+    background: #383f46;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    width: 100vw;
+    color: #ffffff; /* All text color white */
+  }
+  p {
+    font-family: 'Comfortaa', Arial, sans-serif;
+    color: #ffffff;
+  }
   .container {
-    max-width: 100vw;
-    padding: 12px 2vw 0 2vw;
-    min-height: unset;
-  }
-  .itinerary-section {
-    max-width: 100vw;
-    padding: 0 2vw;
-  }
-  h1, h2, .brand {
-    font-size: 1.3em !important;
-    margin: 10px 0 6px 0 !important;
-    word-break: break-word;
-  }
-  .mode-btn {
-    display: block;
-    width: 100%;
-    margin: 6px 0 !important;
-    font-size: 1em !important;
-    padding: 7px 0;
-  }
-  #searchForm {
+    width: 100vw;
+    margin: 0;
+    background: #383f46; /* Change container bg to match site bg */
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    position: relative;
+    display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-  #searchInput {
-    width: 100% !important;
-    font-size: 1em;
-    padding: 8px 10px;
+    min-height: 100vh;
     max-width: 100vw;
+    color: #ffffff;
   }
-  #searchForm button[type="submit"] {
-    width: 60vw !important;
-    max-width: 200px;
-    min-width: 90px;
-    font-size: 1em !important;
-    padding: 8px 0 !important;
-    align-self: center;
+  .brand {
+    text-align: center;
+    font-weight: 700;
+    font-size: 2.1em;
+    color: #39daf8 !important; /* Heading color */
+    margin-bottom: 2px;
+    letter-spacing: 1px;
+    font-family: 'Boldense', Arial, sans-serif !important; /* Heading font */
+    margin-top: 32px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #39daf8 !important;
+    font-size: 1.1em;
+    margin: 0 0 16px 0;
+    font-family: 'Boldense', Arial, sans-serif !important;
+    font-weight: 700 !important;
+  }
+  /* Headings styling (h1-h6 and card-title) */
+  h1, h2, h3, h4, h5, h6, .card-title, .itinerary-header-row h4 {
+    font-family: 'Boldense', Arial, sans-serif !important;
+    color: #39daf8 !important;
+    font-weight: 700 !important;
+  }
+
+  /* --- Itinerary section --- */
+  .itinerary-section {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto 20px auto;
+    padding: 0 2vw;
+    background: #383f46; /* bg as per site */
+    color: #ffffff;
+  }
+  .itinerary-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+  /* Overridden above for heading color/font */
+  .export-btn {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    transition: background 0.2s, color 0.2s;
+    font-size: 0.96em;
+    padding: 7px 13px;
+    margin: 0;
+    min-width: 100px;
+    box-sizing: border-box;
+  }
+  .export-btn:disabled {
+    background: #ccc !important;
+    color: #888 !important;
+    cursor: not-allowed;
+  }
+  .export-btn:hover:not(:disabled) {
+    background: #1a1a1a !important;
+    color: #39daf8 !important;
+  }
+  .itinerary-list {
+    list-style: none;
+    padding: 0;
     margin: 0;
   }
-  .card {
-    width: 97vw !important;
-    max-width: 97vw !important;
-    margin-left: -2vw !important;
-    margin-right: -2vw !important;
-    border-radius: 8px;
-    padding: 10px 7px;
+  .itinerary-list li {
+    margin: 0 0 8px 0;
+    background: #23272c;
+    border-radius: 6px;
+    padding: 5px 5px 5px 5px;
+    border: 1px solid #444c5a;
+    box-shadow: 0 1px 4px #4169e115;
+    font-size: 0.98em;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    color: #ffffff;
+  }
+  .itinerary-header {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 1px;
+  }
+  .itinerary-link {
+    color: #39daf8 !important;
+    text-decoration: none;
     font-size: 0.97em;
+    margin-left: 4px;
+    font-family: 'Comfortaa', Arial, sans-serif;
   }
-  .card-btn, .action-btn, .place-choice-btn, .remove, .mode-btn, .export-btn {
-    font-size: 0.93em !important;
-    padding: 6px 6px !important;
-    margin: 3px 0 !important;
+  .itinerary-btns {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    font-family: 'Comfortaa', Arial, sans-serif;
   }
-  .tutorial-btn {
-    position: fixed !important;
-    right: 10px !important;
-    bottom: 68px !important;
-    font-size: 1.3em !important;
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
+  .itinerary-list input[type="text"], .itinerary-list textarea {
+    font-size: 0.96em;
+    padding: 2px 5px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+    background: #23272c;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    color: #ffffff;
+  }
+  .itinerary-list textarea {
+    resize: vertical;
+    min-height: 18px;
+    max-height: 40px;
+    width: 100%;
+    background: #23272c;
+    color: #ffffff;
+  }
+  .remove {
+    margin-left: auto;
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 7px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .remove:disabled {
+    background: #ccc !important;
+    color: #888 !important;
+  }
+
+  /* --- Cards and Buttons --- */
+  .card {
+    background: #23272c;
+    border: 1px solid #444c5a;
+    border-radius: 8px;
+    padding: 13px 15px 10px 15px;
+    box-shadow: 0 2px 8px #4169e119;
+    margin-bottom: 8px;
+    color: #ffffff;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+  .card-title {
+    font-size: 1.08em;
+    /* style handled above in .card-title */
+    margin-right: 5px;
+  }
+  .card-btn,
+  .action-btn,
+  .place-choice-btn,
+  .remove,
+  .export-btn,
+  .mode-btn {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    transition: background 0.2s, color 0.2s;
+    font-size: 0.96em;
+    padding: 5px 10px;
+    margin: 2px 2px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .card-btn:disabled,
+  .action-btn:disabled,
+  .place-choice-btn:disabled,
+  .remove:disabled,
+  .export-btn:disabled,
+  .mode-btn:disabled {
+    background: #ccc !important;
+    color: #888 !important;
+    cursor: not-allowed;
+  }
+  .card-btn:hover:not(:disabled),
+  .action-btn:hover:not(:disabled),
+  .export-btn:hover:not(:disabled),
+  .mode-btn:hover:not(:disabled),
+  .card-btn.selected,
+  .action-btn.selected,
+  .mode-btn.selected,
+  .place-choice-btn:hover,
+  .place-choice-btn.selected {
+    background: #1a1a1a !important;
+    color: #39daf8 !important;
+  }
+  .card-rating {
+    font-size: 0.98em;
+    margin-bottom: 2px;
+    color: #ffffff;
+    font-family: 'Comfortaa', Arial, sans-serif;
+  }
+  .card-address {
+    margin-bottom: 2px;
+    color: #ffffff;
+    font-size: 0.97em;
+    font-family: 'Comfortaa', Arial, sans-serif;
+  }
+  .card-desc {
+    font-style: italic;
+    color: #39daf8;
+    font-size: 0.93em;
+    margin-bottom: 2px;
+    background: #23272c;
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-family: 'Comfortaa', Arial, sans-serif;
+  }
+  .card-link {
+    color: #39daf8 !important;
+    text-decoration: none;
+    font-size: 0.95em;
+    font-family: 'Comfortaa', Arial, sans-serif;
+  }
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    padding: 7px 12px;
+    font-size: 0.98em;
+    margin-bottom: 3px;
+  }
+  .place-choice-btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background: #000000 !important;
+    color: #ffffff !important;
+    font-size: 0.98em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Comfortaa', inherit;
+  }
+  .place-choice-btn:hover,
+  .place-choice-btn.selected {
+    background: #1a1a1a !important;
+    color: #39daf8 !important;
+  }
+
+  /* --- Inputs --- */
+  .input-row {
+    display: flex;
+    gap: 8px;
+    padding: 14px 0 16px 0;
+    border-top: 1px solid #444c5a;
+    background: #383f46;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    color: #ffffff;
+  }
+  .input-row input {
+    font-size: 1.08em;
+    padding: 9px 12px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+    flex: 1;
+    background: #23272c;
+    color: #ffffff;
+    font-family: 'Comfortaa', Arial, sans-serif;
+  }
+  .input-row button {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 18px;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: inherit;
+  }
+  .input-row button:disabled,
+  .input-row input:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .autocomplete-row {
+    background: #23272c;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+    padding: 7px;
+    margin-bottom: 10px;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    color: #ffffff;
+  }
+  /* --- Search Form --- */
+  #searchForm {
+    display: flex;
     justify-content: center;
     align-items: center;
-    text-align: center;
-    display: flex !important;
-    z-index: 101;
-  }
-}
-/* Super extra small screens */
-@media (max-width: 400px) {
-  .container { padding: 7px 0 0 0; }
-  .card { font-size: 0.91em; }
-  .export-btn, .mode-btn, .card-btn, .action-btn { font-size: 0.91em !important; }
-}
-*, *:before, *:after {
-  box-sizing: border-box;
-}
-
-@media (max-width: 700px) {
-  #searchInput,
-  .input-row input {
-    font-size: 0.95em !important;
-    padding: 7px 8px !important;
-    max-width: 96vw !important;
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-}
-@media (max-width: 700px) {
-  #searchForm {
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    width: 100% !important;
-    margin-bottom: 10px !important;
-    max-width: 100vw !important;
+    gap: 8px;
+    margin-bottom: 12px;
   }
   #searchInput {
-    font-size: 0.95em !important;
-    padding: 7px 8px !important;
-    width: 55vw !important;
-    min-width: 0 !important;
-    max-width: 70vw !important;
-    box-sizing: border-box !important;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    font-size: 1.08em;
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+    background: #23272c;
+    color: #ffffff;
+    flex: 1 1 180px;
+    min-width: 0;
+    max-width: 250px;
   }
   #searchForm button[type="submit"] {
-    font-size: 0.95em !important;
-    padding: 7px 12px !important;
-    width: auto !important;
-    min-width: 70px !important;
-    max-width: 30vw !important;
-    margin: 0 !important;
-    align-self: auto !important;
-    display: inline-block !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    transition: background 0.2s, color 0.2s;
+    width: auto;
+    min-width: 90px;
+    max-width: 200px;
+    display: block;
+    margin: 0 auto;
   }
-}
-    #manualModeArea #searchForm {
-  display: flex;
-  justify-content: center; /* center horizontally */
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin: 0 auto;           /* center the form container */
-  max-width: 1000px;       /* keep a sensible maximum on very wide screens */
-  box-sizing: border-box;
-}
-
-/* Make the input field longer while preserving existing look */
-#manualModeArea #searchForm #searchInput,
-#manualModeArea #searchForm input[type="text"] {
-  width: 70% !important;     /* wider on desktop */
-  min-width: 360px;          /* avoid being too narrow on medium screens */
-  max-width: calc(100% - 140px); /* leave room for the button */
-  padding: 9px 12px;
-  box-sizing: border-box;
-}
-
-/* Keep submit button reasonable size and aligned */
-#manualModeArea #searchForm button[type="submit"] {
-  min-width: 110px;
-  padding: 8px 14px;
-  align-self: center;
-}
-
-/* Mobile / small screens: stack vertically and make input nearly full width */
-@media (max-width: 640px) {
+  #searchForm button[type="submit"]:hover:not(:disabled) {
+    background: #1a1a1a !important;
+    color: #39daf8 !important;
+  }
+  a, .card-link, .itinerary-link {
+    color: #39daf8 !important;
+  }
+  #actionArea b,
+  #actionArea strong,
+  #actionArea .results-query {
+    color: #39daf8 !important;
+    font-family: 'Boldense', Arial, sans-serif;
+    font-weight: bold;
+  }
+  /* Help Button */
+  .tutorial-btn {
+    position: fixed;
+    right: 10px;
+    bottom: 68px;
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    font-family: 'Comfortaa', Arial, sans-serif;
+    font-size: 1.3em;
+    font-weight: bold;
+    box-shadow: 0 2px 8px #4169e119;
+    z-index: 101;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .tutorial-btn:hover {
+    background: #1a1a1a !important;
+    color: #39daf8 !important;
+  }
+  /* --- MOBILE FRIENDLY --- */
+  @media (max-width: 900px) {
+    .container { max-width: 99vw; }
+    .itinerary-section { max-width: 99vw; }
+  }
+  @media (max-width: 700px) {
+    .container {
+      max-width: 100vw;
+      padding: 12px 2vw 0 2vw;
+      min-height: unset;
+    }
+    .itinerary-section {
+      max-width: 100vw;
+      padding: 0 2vw;
+    }
+    h1, h2, .brand {
+      font-size: 1.3em !important;
+      margin: 10px 0 6px 0 !important;
+      word-break: break-word;
+    }
+    .mode-btn {
+      display: block;
+      width: 100%;
+      margin: 6px 0 !important;
+      font-size: 1em !important;
+      padding: 7px 0;
+    }
+    #searchForm {
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+    #searchInput {
+      width: 100% !important;
+      font-size: 1em;
+      padding: 8px 10px;
+      max-width: 100vw;
+    }
+    #searchForm button[type="submit"] {
+      width: 60vw !important;
+      max-width: 200px;
+      min-width: 90px;
+      font-size: 1em !important;
+      padding: 8px 0 !important;
+      align-self: center;
+      margin: 0;
+    }
+    .card {
+      width: 97vw !important;
+      max-width: 97vw !important;
+      margin-left: -2vw !important;
+      margin-right: -2vw !important;
+      border-radius: 8px;
+      padding: 10px 7px;
+      font-size: 0.97em;
+    }
+    .card-btn, .action-btn, .place-choice-btn, .remove, .mode-btn, .export-btn {
+      font-size: 0.93em !important;
+      padding: 6px 6px !important;
+      margin: 3px 0 !important;
+    }
+    .tutorial-btn {
+      position: fixed !important;
+      right: 10px !important;
+      bottom: 68px !important;
+      font-size: 1.3em !important;
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
+      padding: 0 !important;
+      border-radius: 50% !important;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      display: flex !important;
+      z-index: 101;
+    }
+  }
+  @media (max-width: 400px) {
+    .container { padding: 7px 0 0 0; }
+    .card { font-size: 0.91em; }
+    .export-btn, .mode-btn, .card-btn, .action-btn { font-size: 0.91em !important; }
+  }
+  *, *:before, *:after {
+    box-sizing: border-box;
+  }
+  @media (max-width: 700px) {
+    #searchInput,
+    .input-row input {
+      font-size: 0.95em !important;
+      padding: 7px 8px !important;
+      max-width: 96vw !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+  }
+  @media (max-width: 700px) {
+    #searchForm {
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      width: 100% !important;
+      margin-bottom: 10px !important;
+      max-width: 100vw !important;
+    }
+    #searchInput {
+      font-size: 0.95em !important;
+      padding: 7px 8px !important;
+      width: 55vw !important;
+      min-width: 0 !important;
+      max-width: 70vw !important;
+      box-sizing: border-box !important;
+    }
+    #searchForm button[type="submit"] {
+      font-size: 0.95em !important;
+      padding: 7px 12px !important;
+      width: auto !important;
+      min-width: 70px !important;
+      max-width: 30vw !important;
+      margin: 0 !important;
+      align-self: auto !important;
+      display: inline-block !important;
+    }
+  }
   #manualModeArea #searchForm {
-    flex-direction: column;
-    gap: 10px;
-    padding: 0 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0 auto;
+    max-width: 1000px;
+    box-sizing: border-box;
   }
-  #manualModeArea #searchForm #searchInput {
-    width: 96% !important;
-    min-width: 0;
+  #manualModeArea #searchForm #searchInput,
+  #manualModeArea #searchForm input[type="text"] {
+    width: 70% !important;
+    min-width: 360px;
+    max-width: calc(100% - 140px);
+    padding: 9px 12px;
+    box-sizing: border-box;
+    background: #23272c;
+    color: #ffffff;
   }
   #manualModeArea #searchForm button[type="submit"] {
-    width: 70%;
-    max-width: 320px;
+    min-width: 110px;
+    padding: 8px 14px;
+    align-self: center;
+    background: #000000 !important;
+    color: #ffffff !important;
   }
-  
-}
-#automaticItineraryForm textarea {
-  font-family: 'Comfortaa', Arial, sans-serif;
-
-  font-size: 1.02em;
-}
-  </style>
+  @media (max-width: 640px) {
+    #manualModeArea #searchForm {
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 12px;
+    }
+    #manualModeArea #searchForm #searchInput {
+      width: 96% !important;
+      min-width: 0;
+    }
+    #manualModeArea #searchForm button[type="submit"] {
+      width: 70%;
+      max-width: 320px;
+    }
+  }
+  #automaticItineraryForm textarea {
+    font-family: 'Comfortaa', Arial, sans-serif;
+    font-size: 1.02em;
+    color: #ffffff;
+    background: #23272c;
+  }
+</style>
 </head>
 <body>
   <div class="container">
